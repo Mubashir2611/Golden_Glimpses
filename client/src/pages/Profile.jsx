@@ -262,18 +262,6 @@ const Profile = () => {
                   <Divider sx={{ my: 3, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
                   
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6" sx={{ fontWeight: 'medium' }}>
-                      Account Security
-                    </Typography>
-                    
-                    <Button 
-                      variant="outlined" 
-                      color="primary" 
-                      startIcon={<KeyIcon />}
-                      sx={{ mt: 1 }}
-                    >
-                      Change Password
-                    </Button>
                   </Box>
                 </CardContent>
               </Card>

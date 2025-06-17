@@ -27,28 +27,24 @@ import VerticalBackgroundSlider from '../components/VerticalBackgroundSlider';
 const LandingPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated, login, register, user, logout } = useAuth();
-    // Background images for the vertical slider
   const backgroundImages = [
     'public/assests/images/slides.jpg',
     'public/assests/images/slides2.jpg',
     'public/assests/images/slides3.jpg'
   ];
   
-  // Modal state
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
+  const [authMode, setAuthMode] = useState('login'); 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
-  // Form data
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: ''
   });
   
-  // Redirect to dashboard if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/dashboard');
@@ -108,14 +104,12 @@ const LandingPage = () => {
   };
   return (
     <div className="min-h-screen w-full relative">
-      {/* Vertical Background Slider */}
       <VerticalBackgroundSlider 
         images={backgroundImages}
         interval={2000}
         overlayOpacity={0.75}
       />
       
-      {/* Fixed Navbar */}
       <Navbar 
         onShowAuth={handleShowAuth}
         isLoggedIn={isAuthenticated}
@@ -123,11 +117,10 @@ const LandingPage = () => {
         user={user}
       />
       
-      {/* Main Content - Empty middle section */}
       <div 
         className="min-h-screen w-full flex items-center justify-center relative"
         style={{
-          paddingTop: '80px' // Account for fixed navbar
+          paddingTop: '80px'
         }}
       >
         <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 20 }}>

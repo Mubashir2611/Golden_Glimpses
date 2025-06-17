@@ -16,14 +16,12 @@ import Settings from './pages/Settings';
 import Explore from './pages/Explore';
 import NotFound from './pages/NotFound';
 
-// Protected route component
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
   return token ? children : <Navigate to="/" />;
 };
 
 function App() {
-  // Create dark theme
   const theme = createTheme({
     palette: {
       mode: 'dark',
@@ -75,12 +73,10 @@ function App() {
             <div className="app-container">
               <main className="content">
                 <Routes>
-                  {/* Public routes */}
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/contact" element={<Contact />} />
                   
-                  {/* Protected routes */}
                   <Route 
                     path="/dashboard" 
                     element={
@@ -130,7 +126,6 @@ function App() {
                     } 
                   />
                   
-                  {/* 404 Not Found route - must be last */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>

@@ -106,13 +106,10 @@ const Settings = () => {
   const handleDeleteAccount = async () => {
     if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
       try {
-        // Call the API to delete the account
         await api.delete('/users/account');
         
-        // Log out the user
         logout();
         
-        // Redirect to home page
         navigate('/');
       } catch (err) {
         console.error('Error deleting account:', err);
@@ -161,7 +158,6 @@ const Settings = () => {
             </Tabs>
           </Box>
           
-          {/* Notifications Tab */}
           <TabPanel value={tabValue} index={0}>
             <List>
               <ListItem>
@@ -215,7 +211,6 @@ const Settings = () => {
             </List>
           </TabPanel>
           
-          {/* Appearance Tab */}
           <TabPanel value={tabValue} index={1}>
             <Grid container spacing={3}>
               <Grid item xs={12}>
@@ -253,24 +248,6 @@ const Settings = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel id="language-label">Language</InputLabel>
-                  <Select
-                    labelId="language-label"
-                    id="language-select"
-                    value={settings.language}
-                    label="Language"
-                    onChange={handleSettingChange('language')}
-                  >
-                    <MenuItem value="en">English</MenuItem>
-                    <MenuItem value="es">Spanish</MenuItem>
-                    <MenuItem value="fr">French</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              
               <Grid item xs={12}>
                 <Divider sx={{ my: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
                 
@@ -292,34 +269,10 @@ const Settings = () => {
             </Grid>
           </TabPanel>
           
-          {/* Privacy & Security Tab */}
           <TabPanel value={tabValue} index={2}>
             <Grid container spacing={3}>
               <Grid item xs={12}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'medium', mb: 2 }}>
-                  Account Security
-                </Typography>
-                
-                <Button 
-                  variant="outlined" 
-                  color="primary"
-                  sx={{ mb: 2 }}
-                >
-                  Change Password
-                </Button>
-                
-                <Button 
-                  variant="outlined" 
-                  color="primary"
-                  sx={{ mb: 2, ml: 2 }}
-                >
-                  Enable Two-Factor Authentication
-                </Button>
-              </Grid>
-              
-              <Grid item xs={12}>
                 <Divider sx={{ my: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
-                
                 <Typography variant="subtitle1" sx={{ fontWeight: 'medium', my: 2 }}>
                   Sessions
                 </Typography>

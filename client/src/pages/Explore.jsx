@@ -40,7 +40,6 @@ const Explore = () => {
       setLoading(true);
       
       try {
-        // Fetch public capsules from API
         const response = await api.get('/capsules/public', {
           params: { page, search: searchTerm }
         });
@@ -57,7 +56,7 @@ const Explore = () => {
             createdAt: new Date(capsule.createdAt),
             unlockDate: new Date(capsule.unlockDate),
             likeCount: capsule.likes?.length || 0,
-            isLiked: false // We'll update this based on user session later
+            isLiked: false 
           })));
         } else {
           throw new Error(response.data.message || 'Failed to fetch public capsules');
@@ -66,12 +65,11 @@ const Explore = () => {
         console.error('Error fetching public capsules:', err);
         setError('Failed to load public capsules. Please try again.');
         
-        // Fallback to mock data
         const mockCapsules = [
           {
             id: 'p1',
-            title: 'College Graduation 2024',
-            creatorName: 'Alex Smith',
+            title: 'College Graduation 2025',
+            creatorName: 'Admin',
             description: 'Memories from our amazing graduation ceremony',
             thumbnailUrl: '/public/assets/images/slides.jpg',
             unlockDate: new Date('2025-06-10'),
@@ -96,7 +94,7 @@ const Explore = () => {
           },
           {
             id: 'p3',
-            title: 'Family Reunion 2024',
+            title: 'Family Reunion 2025',
             creatorName: 'Jordan Taylor',
             description: 'First family get-together since the pandemic',
             thumbnailUrl: '/public/assets/images/slides3.jpg',
@@ -109,7 +107,7 @@ const Explore = () => {
           },
           {
             id: 'p4',
-            title: 'New York City Trip',
+            title: 'Darjeeling Trip',
             creatorName: 'Sam Jones',
             description: 'Weekend exploring the Big Apple',
             thumbnailUrl: '/public/assets/images/slides.jpg',
@@ -135,7 +133,7 @@ const Explore = () => {
           },
           {
             id: 'p6',
-            title: 'Art Exhibition 2024',
+            title: 'Art Exhibition 2025',
             creatorName: 'Robin Chen',
             description: 'My first solo art exhibition',
             thumbnailUrl: '/public/assets/images/slides3.jpg',
