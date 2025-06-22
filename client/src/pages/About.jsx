@@ -16,7 +16,7 @@ const About = () => {
             fontWeight="bold"
             sx={{ mb: 2 }}
           >
-            About Time Capsule
+            About Golden Glimpses
           </Typography>
           <Typography 
             variant="h6" 
@@ -48,7 +48,7 @@ const About = () => {
                 Our Mission
               </Typography>
               <Typography variant="body1" paragraph>
-                Time Capsule was created with a simple but powerful mission: to help people preserve their most 
+                Golden Glimpses was created with a simple but powerful mission: to help people preserve their most 
                 meaningful memories and share them at just the right moment in the future.
               </Typography>
               <Typography variant="body1" paragraph>
@@ -132,7 +132,7 @@ const About = () => {
                 Our Team
               </Typography>
               <Typography variant="body1" paragraph>
-                Time Capsule was founded in 2023 by a team of developers passionate about preserving digital 
+                Golden Glimpses was founded in 2025 by a team of developers passionate about preserving digital 
                 memories. Our diverse team brings together expertise in web development, UX design, security, 
                 and cloud infrastructure to create a platform that's both powerful and easy to use.
               </Typography>

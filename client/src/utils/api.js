@@ -74,4 +74,14 @@ export const memoryAPI = {
   deleteMemory: (id) => api.delete(`/memories/${id}`),
 };
 
+// Media API calls
+export const mediaAPI = {
+  uploadFile: (formData, onUploadProgress) => 
+    api.post('/media/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress
+    }),
+  deleteFile: (publicId) => api.delete(`/media/${publicId}`),
+};
+
 export default api;

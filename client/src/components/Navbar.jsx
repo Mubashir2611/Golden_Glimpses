@@ -23,7 +23,7 @@ const Navbar = ({ onShowAuth, isLoggedIn, onLogout, user }) => {
           whileHover={{ scale: 1.05 }}
           transition={{ type: "spring", stiffness: 300 }}
         >
-          Time Capsule
+          Golden Glimpses
         </motion.div>
       </Link>
       
@@ -31,7 +31,6 @@ const Navbar = ({ onShowAuth, isLoggedIn, onLogout, user }) => {
       <div className="nav-center">
         <Link to="/" className="nav-link">Home</Link>
         <Link to="/about" className="nav-link">About</Link>
-        <Link to="/explore" className="nav-link">Explore</Link>
         <Link to="/contact" className="nav-link">Contact</Link>
       </div>
       

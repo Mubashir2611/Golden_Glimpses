@@ -7,24 +7,19 @@ const BackgroundSlider = ({ images, interval = 5000, effect = 'fade' }) => {
   const timerRef = useRef(null);
 
   useEffect(() => {
-    // Clear any existing interval when component mounts or images/interval changes
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
     
-    // Set up the interval for changing slides
     timerRef.current = setInterval(() => {
-      // First make the current slide invisible
       setIsVisible(false);
       
-      // After a short delay, change the slide and make it visible again
       setTimeout(() => {
         setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
         setIsVisible(true);
-      }, 500); // 500ms transition duration
+      }, 500); 
     }, interval);
     
-    // Clean up the interval when component unmounts
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);

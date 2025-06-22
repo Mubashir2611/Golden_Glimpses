@@ -13,6 +13,7 @@ import authRoutes from './routes/auth.js';
 import capsuleRoutes from './routes/capsules.js';
 import memoryRoutes from './routes/memories.js';
 import userRoutes from './routes/users.js';
+import mediaRoutes from './routes/media.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -95,6 +96,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/capsules', capsuleRoutes);
 app.use('/api/memories', memoryRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/media', mediaRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {

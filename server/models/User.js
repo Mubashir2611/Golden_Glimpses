@@ -1,111 +1,102 @@
-import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
+import express from 'express';
+import User from '../models/User.js';
+import { authenticateToken as auth } from '../middleware/auth.js';
 
-const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: [true, 'Name is required'],
-    trim: true,
-    minlength: [2, 'Name must be at least 2 characters long'],
-    maxlength: [50, 'Name cannot exceed 50 characters']
-  },
-  email: {
-    type: String,
-    required: [true, 'Email is required'],
-    unique: true,
-    lowercase: true,
-    trim: true,
-    match: [
-      /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
-      'Please enter a valid email address'
-    ]
-  },
-  password: {
-    type: String,
-    required: [true, 'Password is required'],
-    minlength: [6, 'Password must be at least 6 characters long'],
-    select: false // Don't include password in queries by default
-  },
-  avatar: {
-    type: String,
-    default: ''
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  lastLogin: {
-    type: Date,
-    default: null
-  },
-  passwordResetToken: {
-    type: String,
-    default: null
-  },
-  passwordResetExpires: {
-    type: Date,
-    default: null
-  }
-}, {
-  timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
-});
-
-// Virtual for user's capsules
-userSchema.virtual('capsules', {
-  ref: 'Capsule',
-  localField: '_id',
-  foreignField: 'owner'
-});
-
-// Index for performance - email index is already created by unique: true
-userSchema.index({ createdAt: -1 });
-
-// Pre-save middleware to hash password
-userSchema.pre('save', async function(next) {
-  // Only hash the password if it has been modified (or is new)
-  if (!this.isModified('password')) return next();
-
+// Mock database for users
+const getMockUsers = () => {
   try {
-    // Hash password with cost of 12
-    const salt = await bcrypt.genSalt(12);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
+    return global.mockUsers || [];
+  } catch (e) {
+    return [];
+  }
+};
+
+const router = express.Router();
+
+// @route   GET /api/users/profile
+// @desc    Get user profile
+// @access  Private
+router.get('/profile', auth, async (req, res) => {
+  try {
+    if (global.mockDB) {
+      // Mock database flow
+      const mockUsers = getMockUsers();
+      const user = mockUsers.find(u => u._id === req.userId);
+      
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          msg: 'User not found'
+        });
+      }
+
+      // Return user without password
+      const { password, ...userProfile } = user;
+      return res.json({
+        success: true,
+        user: userProfile
+      });
+    }
+
+    // MongoDB flow
+    const user = await User.findById(req.userId).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        msg: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      user
+    });
   } catch (error) {
-    next(error);
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({
+      success: false,
+      msg: 'Server error while fetching profile'
+    });
   }
 });
 
-// Instance method to check password
-userSchema.methods.comparePassword = async function(candidatePassword) {
+// @route   PUT /api/users/profile
+// @desc    Update user profile
+// @access  Private
+router.put('/profile', auth, async (req, res) => {
   try {
-    return await bcrypt.compare(candidatePassword, this.password);
+    const { name } = req.body;
+    
+    const user = await User.findById(req.userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        msg: 'User not found'
+      });
+    }
+
+    if (name) user.name = name.trim();
+    
+    await user.save();
+
+    res.json({
+      success: true,
+      msg: 'Profile updated successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email
+      }
+    });
   } catch (error) {
-    throw new Error('Password comparison failed');
+    console.error('Error updating profile:', error);
+    res.status(500).json({
+      success: false,
+      msg: 'Server error while updating profile'
+    });
   }
-};
+});
 
-// Instance method to update last login
-userSchema.methods.updateLastLogin = function() {
-  this.lastLogin = new Date();
-  return this.save({ validateBeforeSave: false });
-};
-
-// Static method to find by email
-userSchema.statics.findByEmail = function(email) {
-  return this.findOne({ email: email.toLowerCase() });
-};
-
-// Transform output (remove sensitive fields)
-userSchema.methods.toJSON = function() {
-  const userObject = this.toObject();
-  delete userObject.password;
-  delete userObject.passwordResetToken;
-  delete userObject.passwordResetExpires;
-  return userObject;
-};
-
-const User = mongoose.model('User', userSchema);
-
-export default User;
+export default router;

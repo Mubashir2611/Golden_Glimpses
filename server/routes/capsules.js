@@ -15,6 +15,86 @@ const getMockCapsules = () => {
 
 const router = express.Router();
 
+// @route   GET /api/capsules/public
+// @desc    Get public capsules for explore page
+// @access  Public
+router.get('/public', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12;
+    const search = req.query.search || '';
+    
+    if (global.mockDB) {
+      // Mock database flow
+      const mockCapsules = getMockCapsules();
+      const publicCapsules = mockCapsules.filter(capsule => 
+        capsule.isPublic && 
+        (search === '' || 
+         capsule.name.toLowerCase().includes(search.toLowerCase()) ||
+         capsule.description.toLowerCase().includes(search.toLowerCase())
+        )
+      );
+      
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedCapsules = publicCapsules.slice(startIndex, endIndex);
+      
+      return res.json({
+        success: true,
+        capsules: paginatedCapsules,
+        pagination: {
+          page,
+          limit,
+          total: publicCapsules.length,
+          pages: Math.ceil(publicCapsules.length / limit)
+        }
+      });
+    }
+
+    // MongoDB flow
+    const skip = (page - 1) * limit;
+    const searchQuery = search ? {
+      $or: [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { tags: { $in: [new RegExp(search, 'i')] } }
+      ]
+    } : {};
+
+    const query = {
+      isPublic: true,
+      unlocked: true, // Only show unlocked public capsules
+      ...searchQuery
+    };
+
+    const capsules = await Capsule.find(query)
+      .populate('owner', 'name email')
+      .populate('memories')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Capsule.countDocuments(query);
+
+    res.json({
+      success: true,
+      capsules,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching public capsules:', error);
+    res.status(500).json({
+      success: false,
+      msg: 'Server error while fetching public capsules'
+    });
+  }
+});
+
 // @route   GET /api/capsules
 // @desc    Get all capsules for authenticated user
 // @access  Private
@@ -132,16 +212,19 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
+// @route   POST /api/capsules
+// @desc    Create a new capsule
+// @access  Private
 router.post('/', [
   auth,
-  body('title')
+  body('name')
     .trim()
-    .isLength({ min: 1, max: 100 })
-    .withMessage('Title must be between 1 and 100 characters'),
-  body('message')
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Name must be between 2 and 100 characters'),
+  body('description')
     .trim()
-    .isLength({ min: 1, max: 2000 })
-    .withMessage('Message must be between 1 and 2000 characters'),
+    .isLength({ min: 10, max: 1000 })
+    .withMessage('Description must be between 10 and 1000 characters'),
   body('unlockDate')
     .isISO8601()
     .custom((value) => {
@@ -161,20 +244,44 @@ router.post('/', [
       });
     }
 
-    const { title, message, unlockDate } = req.body;
+    const { 
+      name, 
+      description, 
+      unlockDate, 
+      mediaUrls = [], 
+      tags = [], 
+      theme = 'default',
+      isPublic = false 
+    } = req.body;
 
     if (global.mockDB) {
       // Mock database flow
       const newCapsule = {
         _id: uuidv4(),
-        title: title.trim(),
-        message: message.trim(),
+        name: name.trim(),
+        description: description.trim(),
         unlockDate: new Date(unlockDate),
         owner: req.userId,
         unlocked: false,
-        memories: [],
+        mediaUrls,
+        tags,
+        theme,
+        isPublic,
+        memoryCount: mediaUrls.length,
+        viewCount: 0,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        memories: mediaUrls.map(media => ({
+          _id: uuidv4(),
+          type: media.type.startsWith('image/') ? 'image' : 'video',
+          content: {
+            fileUrl: media.url,
+            fileName: media.name,
+            fileSize: media.size,
+            mimeType: media.type
+          },
+          createdAt: new Date()
+        }))
       };
 
       const mockCapsules = getMockCapsules();
@@ -190,15 +297,41 @@ router.post('/', [
 
     // MongoDB flow
     const capsule = new Capsule({
-      title: title.trim(),
-      message: message.trim(),
+      name: name.trim(),
+      description: description.trim(),
       unlockDate: new Date(unlockDate),
-      owner: req.userId
+      owner: req.userId,
+      tags,
+      theme,
+      isPublic
     });
 
     await capsule.save();
 
-    res.status(201).json({
+    // Create memory entries for each media file
+    if (mediaUrls.length > 0) {
+      const Memory = (await import('../models/Memory.js')).default;
+      
+      const memoryPromises = mediaUrls.map(media => {
+        const memory = new Memory({
+          capsule: capsule._id,
+          owner: req.userId,
+          type: media.type.startsWith('image/') ? 'image' : 'video',
+          content: {
+            fileUrl: media.url,
+            fileName: media.name,
+            fileSize: media.size,
+            mimeType: media.type
+          }
+        });
+        return memory.save();
+      });
+
+      await Promise.all(memoryPromises);
+    }
+
+    // Populate the capsule with memories
+    await capsule.populate('memories');    res.status(201).json({
       success: true,
       msg: 'Time capsule created successfully',
       capsule

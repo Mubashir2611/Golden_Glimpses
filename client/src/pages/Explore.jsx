@@ -13,7 +13,9 @@ import {
   Button,
   CircularProgress,
   Pagination,
-  Alert
+  Alert,
+  Avatar,
+  CardActions
 } from '@mui/material';
 import { 
   Search as SearchIcon,
@@ -21,12 +23,14 @@ import {
   FavoriteBorder as FavoriteBorderIcon,
   AccessTime as AccessTimeIcon,
   FilterList as FilterIcon,
-  Sort as SortIcon 
+  Sort as SortIcon,
+  Person as PersonIcon,
+  Share as ShareIcon
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import { format } from 'date-fns';
 import DashboardLayout from '../layouts/DashboardLayout';
-import { formatTimeRemaining } from '../utils/api';
-import api from '../utils/api'; // Import the API utility
+import { formatTimeRemaining, capsuleAPI } from '../utils/api';
 
 const Explore = () => {
   const [loading, setLoading] = useState(true);
@@ -39,10 +43,7 @@ const Explore = () => {
     const fetchPublicCapsules = async () => {
       setLoading(true);
       
-      try {
-        const response = await api.get('/capsules/public', {
-          params: { page, search: searchTerm }
-        });
+      try {        const response = await capsuleAPI.getPublicCapsules(page, searchTerm);
         
         if (response.data.success) {
           setPublicCapsules(response.data.capsules.map(capsule => ({

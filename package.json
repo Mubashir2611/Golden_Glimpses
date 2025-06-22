@@ -1,0 +1,33 @@
+{
+  "name": "mern-time-capsule",
+  "version": "1.0.0",
+  "description": "A full-stack time capsule application with drag-and-drop media upload",
+  "main": "server/server.js",
+  "scripts": {
+    "install-all": "cd server && npm install && cd ../client && npm install",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "start": "cd server && npm start"
+  },
+  "keywords": [
+    "mern",
+    "time-capsule",
+    "react",
+    "nodejs",
+    "mongodb",
+    "cloudinary",
+    "drag-drop",
+    "instagram-style"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  }
+}

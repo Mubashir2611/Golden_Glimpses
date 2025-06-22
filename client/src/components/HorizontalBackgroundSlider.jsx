@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const VerticalBackgroundSlider = ({ 
+const HorizontalBackgroundSlider = ({ 
   images, 
-  interval = 2000, 
+  interval = 5000, 
   overlayOpacity = 0.6,
   className = ''
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [imageLoaded, setImageLoaded] = useState({});
 
   useEffect(() => {
     if (!images || images.length === 0) return;
@@ -18,6 +19,28 @@ const VerticalBackgroundSlider = ({
 
     return () => clearInterval(timer);
   }, [images, interval]);
+  useEffect(() => {
+    if (!images || images.length === 0) return;
+    
+    images.forEach((src, index) => {
+      const img = new Image();
+      img.onload = () => {
+        setImageLoaded(prev => ({ ...prev, [index]: true }));
+        console.log(`Image ${index} loaded successfully:`, src);
+      };
+      img.onerror = (e) => {
+        console.error(`Error loading image ${index}:`, src, e);
+      };
+      
+      if (src.startsWith('/')) {
+        img.src = src; 
+      } else if (src.startsWith('http')) {
+        img.src = src;
+      } else {
+        img.src = `/${src.replace('public/', '')}`; 
+      }
+    });
+  }, [images]);
 
   if (!images || images.length === 0) {
     return (
@@ -36,17 +59,16 @@ const VerticalBackgroundSlider = ({
     <div className={`fixed inset-0 overflow-hidden ${className}`} style={{ zIndex: -1 }}>
       {/* Image Container */}
       <div className="relative w-full h-full">
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           <motion.div
             key={currentIndex}
             className="absolute inset-0"
-            initial={{ y: '100%' }}
-            animate={{ y: '0%' }}
-            exit={{ y: '-100%' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{
-              type: 'tween',
-              duration: 1.2,
-              ease: [0.4, 0, 0.2, 1] // Custom cubic-bezier for smooth animation
+              duration: 2,
+              ease: "easeInOut"
             }}
           >
             <div
@@ -55,9 +77,24 @@ const VerticalBackgroundSlider = ({
                 backgroundImage: `url(${images[currentIndex]})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                transform: 'scale(1.1)', // Slight scale to prevent white edges during animation
+                opacity: imageLoaded[currentIndex] ? 1 : 0.5,
+                transition: 'opacity 0.5s ease-in-out',
+                width: '100vw',
+                height: '100vh',
+                position: 'fixed',
+                top: 0,
+                left: 0,
               }}
             />
+            
+            {/* Preload next image */}
+            {images.length > 1 && (
+              <link 
+                rel="preload" 
+                href={images[(currentIndex + 1) % images.length]} 
+                as="image" 
+              />
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -89,4 +126,4 @@ const VerticalBackgroundSlider = ({
   );
 };
 
-export default VerticalBackgroundSlider;
+export default HorizontalBackgroundSlider;

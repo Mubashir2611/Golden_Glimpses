@@ -1,6 +1,9 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
+// JWT Secret with fallback for development
+const JWT_SECRET = process.env.JWT_SECRET || '2242cdc4d9fbd0b0290a48ebe75bfe679bd48ad2491aec7e02495336aef99a61';
+
 const getMockUsers = () => {
   try {
     return global.mockUsers || [];
@@ -20,11 +23,9 @@ const authenticateToken = async (req, res, next) => {
         success: false,
         message: 'Access token required'
       });
-    }
-
-    let decoded;
+    }    let decoded;
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
+      decoded = jwt.verify(token, JWT_SECRET);
     } catch (tokenError) {
       if (tokenError.name === 'JsonWebTokenError') {
         return res.status(401).json({

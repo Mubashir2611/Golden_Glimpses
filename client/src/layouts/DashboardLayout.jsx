@@ -91,7 +91,7 @@ const DashboardLayout = ({ children }) => {
           </IconButton>
           
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Time Capsule
+            Golden Glimpses
           </Typography>
           
           {/* User menu */}

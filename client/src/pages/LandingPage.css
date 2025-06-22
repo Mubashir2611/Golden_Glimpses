@@ -1,0 +1,33 @@
+/* Additional styles for landing page */
+html, body {
+  overflow-x: hidden; /* Prevent horizontal scroll */
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+
+@supports (-webkit-touch-callout: none) {
+  .min-h-screen {
+    height: -webkit-fill-available;
+  }
+}
+
+/* Fix for full viewport background images */
+.background-slider-fix {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Responsive text sizes */
+@media (max-width: 640px) {
+  .responsive-text {
+    font-size: 90%;
+  }
+}

@@ -8,6 +8,9 @@ import { authenticateToken as auth } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// JWT Secret with fallback for development
+const JWT_SECRET = process.env.JWT_SECRET || '2242cdc4d9fbd0b0290a48ebe75bfe679bd48ad2491aec7e02495336aef99a61';
+
 // Helper function to get mock users
 const getMockUsers = () => {
   return global.mockUsers || [];
@@ -74,12 +77,10 @@ router.post('/register', [
       };
 
       // Add to mock database
-      addMockUser(newUser);
-
-      // Create JWT token
+      addMockUser(newUser);      // Create JWT token
       const token = jwt.sign(
         { userId: newUser._id, email: newUser.email },
-        process.env.JWT_SECRET,
+        JWT_SECRET,
         { expiresIn: '7d' }
       );
 
@@ -110,9 +111,7 @@ router.post('/register', [
       name: name.trim(),
       email: email.toLowerCase().trim(),
       password: password // No manual hashing - let the model handle it
-    });
-
-    await user.save();
+    });    await user.save();
 
     // Create JWT token
     const payload = {
@@ -122,7 +121,7 @@ router.post('/register', [
 
     const token = jwt.sign(
       payload,
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
 
@@ -174,16 +173,23 @@ router.post('/login', [
     if (global.mockDB) {
       // Find user in mock DB
       const mockUsers = getMockUsers();
+      console.log('Looking for user with email:', email.toLowerCase());
+      console.log('Available users:', mockUsers.map(u => ({ email: u.email, id: u._id })));
+      
       const user = mockUsers.find(u => u.email === email.toLowerCase());
       if (!user) {
+        console.log('User not found in mock DB');
         return res.status(400).json({
           success: false,
           msg: 'Invalid email or password'
         });
       }
 
+      console.log('User found, checking password...');
       // Check password
       const isPasswordValid = await bcrypt.compare(password, user.password);
+      console.log('Password valid:', isPasswordValid);
+      
       if (!isPasswordValid) {
         return res.status(400).json({
           success: false,
@@ -192,12 +198,10 @@ router.post('/login', [
       }
 
       // Update last login
-      user.lastLogin = new Date();
-
-      // Create JWT token
+      user.lastLogin = new Date();      // Create JWT token
       const token = jwt.sign(
         { userId: user._id, email: user.email },
-        process.env.JWT_SECRET,
+        JWT_SECRET,
         { expiresIn: '7d' }
       );
 
@@ -223,8 +227,8 @@ router.post('/login', [
       });
     }
 
-    // Check password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    // Check password using model method
+    const isPasswordValid = await user.matchPassword(password);
     if (!isPasswordValid) {
       return res.status(400).json({
         success: false,
@@ -240,11 +244,9 @@ router.post('/login', [
     const payload = {
       userId: user._id,
       email: user.email
-    };
-
-    const token = jwt.sign(
+    };    const token = jwt.sign(
       payload,
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
 
@@ -279,9 +281,7 @@ router.get('/me', async (req, res) => {
         success: false,
         msg: 'No token provided'
       });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    }    const decoded = jwt.verify(token, JWT_SECRET);
     const user = await User.findById(decoded.userId).select('-password');
     
     if (!user) {

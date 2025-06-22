@@ -9,11 +9,6 @@ import {
   Button, 
   Chip, 
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
   CircularProgress,
   Alert,
   Snackbar
@@ -27,23 +22,44 @@ import {
   ArrowForward as ArrowForwardIcon
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import DashboardLayout from '../layouts/DashboardLayout';
 import { capsuleAPI, formatTimeRemaining } from '../utils/api';
 import { Link } from 'react-router-dom';
+import CapsuleCreationModal from '../components/CapsuleCreationModal';
 
 // Using the API utilities from utils/api.js
 
 const Dashboard = () => {
   const [capsules, setCapsules] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [openDialog, setOpenDialog] = useState(false);
+  const [error, setError] = useState(null);  const [openDialog, setOpenDialog] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
     severity: 'info'
   });
+
+  const handleCapsuleCreated = (newCapsule) => {
+    // Add the new capsule to the existing list
+    const formattedCapsule = {
+      id: newCapsule._id,
+      title: newCapsule.name,
+      description: newCapsule.description,
+      createdAt: new Date(newCapsule.createdAt),
+      unlockDate: new Date(newCapsule.unlockDate),
+      mediaCount: newCapsule.mediaUrls?.length || 0,
+      status: newCapsule.unlocked ? 'unlocked' : 'locked',
+      thumbnailUrl: newCapsule.mediaUrls?.[0]?.url || '/assets/images/slides.jpg'
+    };
+    
+    setCapsules(prev => [formattedCapsule, ...prev]);
+    setSnackbar({
+      open: true,
+      message: 'Time capsule created successfully!',
+      severity: 'success'
+    });
+  };
     const fetchCapsules = async () => {
     setLoading(true);
     try {
@@ -350,133 +366,12 @@ const Dashboard = () => {
           </Grid>
         )}
       </Box>
-      
-      {/* Create Capsule Dialog */}
-      <Dialog 
-        open={openDialog} 
+        {/* Create Capsule Dialog */}
+      <CapsuleCreationModal
+        open={openDialog}
         onClose={handleCloseDialog}
-        fullWidth
-        maxWidth="sm"
-        PaperProps={{
-          sx: {
-            bgcolor: '#1e1e1e',
-            backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-            borderRadius: 2,
-            border: '1px solid rgba(255, 255, 255, 0.1)'
-          }
-        }}
-      >
-        <DialogTitle sx={{ color: 'white' }}>Create New Time Capsule</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Capsule Title"
-            type="text"
-            fullWidth
-            variant="outlined"
-            sx={{
-              mb: 2,
-              '& .MuiOutlinedInput-root': {
-                '& fieldset': {
-                  borderColor: 'rgba(255, 255, 255, 0.3)',
-                },
-                '&:hover fieldset': {
-                  borderColor: 'rgba(255, 255, 255, 0.5)',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: 'primary.main',
-                },
-              },
-              '& .MuiInputLabel-root': {
-                color: 'rgba(255, 255, 255, 0.7)',
-              },
-              '& .MuiInputBase-input': {
-                color: 'white',
-              },
-            }}
-          />
-          <TextField
-            margin="dense"
-            label="Description"
-            type="text"
-            fullWidth
-            multiline
-            rows={4}
-            variant="outlined"
-            sx={{
-              mb: 2,
-              '& .MuiOutlinedInput-root': {
-                '& fieldset': {
-                  borderColor: 'rgba(255, 255, 255, 0.3)',
-                },
-                '&:hover fieldset': {
-                  borderColor: 'rgba(255, 255, 255, 0.5)',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: 'primary.main',
-                },
-              },
-              '& .MuiInputLabel-root': {
-                color: 'rgba(255, 255, 255, 0.7)',
-              },
-              '& .MuiInputBase-input': {
-                color: 'white',
-              },
-            }}
-          />
-          <TextField
-            margin="dense"
-            label="Unlock Date"
-            type="date"
-            fullWidth
-            variant="outlined"
-            InputLabelProps={{
-              shrink: true,
-            }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                '& fieldset': {
-                  borderColor: 'rgba(255, 255, 255, 0.3)',
-                },
-                '&:hover fieldset': {
-                  borderColor: 'rgba(255, 255, 255, 0.5)',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: 'primary.main',
-                },
-              },
-              '& .MuiInputLabel-root': {
-                color: 'rgba(255, 255, 255, 0.7)',
-              },
-              '& .MuiInputBase-input': {
-                color: 'white',
-              },
-            }}
-          />
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={handleCloseDialog} sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-            Cancel
-          </Button>
-          <Button 
-            variant="contained"
-            onClick={handleCloseDialog}
-            sx={{
-              borderRadius: '8px',
-              py: 0.75,
-              px: 2,
-              background: 'linear-gradient(45deg, #6366F1 0%, #8B5CF6 100%)',
-              '&:hover': {
-                background: 'linear-gradient(45deg, #5458E3 0%, #7C4DE8 100%)',
-              },
-            }}
-          >
-            Create & Add Media
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onSuccess={handleCapsuleCreated}
+      />
     </DashboardLayout>
   );
 };

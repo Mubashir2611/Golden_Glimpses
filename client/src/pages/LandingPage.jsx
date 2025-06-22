@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import './LandingPage.css';
 import { 
   Typography, 
   Container, 
@@ -22,7 +23,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
-import VerticalBackgroundSlider from '../components/VerticalBackgroundSlider';
+import HorizontalBackgroundSlider from '../components/HorizontalBackgroundSlider';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ const LandingPage = () => {
   const backgroundImages = [
     'public/assests/images/slides.jpg',
     'public/assests/images/slides2.jpg',
-    'public/assests/images/slides3.jpg'
+    'public/assests/images/slides4.jpg'
   ];
   
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -44,12 +45,25 @@ const LandingPage = () => {
     email: '',
     password: ''
   });
-  
-  useEffect(() => {
+    useEffect(() => {
     if (isAuthenticated) {
       navigate('/dashboard');
     }
   }, [isAuthenticated, navigate]);
+  
+  // Disable scrolling when landing page is displayed
+  useEffect(() => {
+    // Save original styles
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    
+    // Disable scrolling
+    document.body.style.overflow = 'hidden';
+    
+    // Re-enable scrolling when component unmounts
+    return () => {
+      document.body.style.overflow = originalStyle;
+    };
+  }, []);
 
   const handleShowAuth = (mode) => {
     setAuthMode(mode);
@@ -101,13 +115,12 @@ const LandingPage = () => {
   const toggleAuthMode = () => {
     setAuthMode(authMode === 'login' ? 'register' : 'login');
     setError('');
-  };
-  return (
-    <div className="min-h-screen w-full relative">
-      <VerticalBackgroundSlider 
+  };  return (
+    <div className="min-h-screen w-full relative overflow-hidden responsive-text no-scroll">
+      <HorizontalBackgroundSlider 
         images={backgroundImages}
-        interval={2000}
-        overlayOpacity={0.75}
+        interval={5000}
+        overlayOpacity={0.7}
       />
       
       <Navbar 
@@ -115,24 +128,33 @@ const LandingPage = () => {
         isLoggedIn={isAuthenticated}
         onLogout={logout}
         user={user}
-      />
-      
-      <div 
-        className="min-h-screen w-full flex items-center justify-center relative"
+      />        <div 
+        className="h-screen w-full flex items-center justify-center relative no-scroll"
         style={{
-          paddingTop: '80px'
+          paddingTop: '80px', 
+          overflow: 'hidden', // Prevent any scrolling
+          maxHeight: '100vh'
         }}
       >
-        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 20 }}>
-          <Box
+        <Container 
+          maxWidth="lg" 
+          sx={{ 
+            position: 'relative', 
+            zIndex: 20,
+            px: { xs: 2, sm: 4, md: 6 } // Responsive padding
+          }}
+        >          <Box
             sx={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              minHeight: 'calc(100vh - 80px)',
+              height: 'calc(100vh - 80px)',
+              maxHeight: 'calc(100vh - 80px)',
               textAlign: 'center',
-              py: 4,
+              py: { xs: 2, sm: 3, md: 4 }, // Reduced padding to prevent overflow
+              width: '100%',
+              overflow: 'hidden'
             }}
           >
             {/* Empty space - all content removed */}
@@ -140,15 +162,14 @@ const LandingPage = () => {
         </Container>
       </div>
 
-      {/* Auth Modal */}
-      <Modal
+      {/* Auth Modal */}      <Modal
         open={showAuthModal}
         onClose={handleCloseModal}
         sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          p: 2,
+          p: { xs: 2, sm: 3, md: 4 }, // Responsive padding
         }}
       >
         <motion.div
@@ -156,17 +177,19 @@ const LandingPage = () => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 50 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-        >
-          <Paper
+        >          <Paper
             sx={{
               background: 'rgba(0, 0, 0, 0.95)',
               backdropFilter: 'blur(20px)',
               border: '1px solid rgba(255, 255, 255, 0.1)',
               borderRadius: 4,
-              p: 4,
+              p: { xs: 3, sm: 4 }, // Responsive padding
               maxWidth: 400,
               width: '100%',
               position: 'relative',
+              mx: 2, // Add margin on x-axis for very small screens
+              overflowY: 'hidden', // Prevent all scrolling
+              maxHeight: '90vh', // Limit height to prevent overflow
             }}
           >
             {/* Close Button */}
@@ -194,7 +217,7 @@ const LandingPage = () => {
                 textAlign: 'center',
               }}
             >
-              {authMode === 'login' ? 'Welcome Back' : 'Join Time Capsule'}
+              {authMode === 'login' ? 'Welcome Back' : 'Join to Golden Glimpses'}
             </Typography>
             
             <Typography
