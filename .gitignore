@@ -12,10 +12,11 @@ node_modules
 dist
 dist-ssr
 .vite
+
 # Environment
 *.local
-.env
-.env.*.local
+client/.env
+server/.env
 
 # OS files
 .DS_Store
