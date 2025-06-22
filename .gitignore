@@ -15,8 +15,8 @@ dist-ssr
 
 # Environment
 *.local
-client/.env
-server/.env
+.env
+.env
 
 # OS files
 .DS_Store
