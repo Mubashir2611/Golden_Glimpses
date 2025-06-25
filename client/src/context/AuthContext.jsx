@@ -29,7 +29,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState(null);
-
   useEffect(() => {
     // Check if the user is logged in
     const verifyToken = async () => {
@@ -50,17 +49,29 @@ export const AuthProvider = ({ children }) => {
         console.error('Token verification failed:', err);
         // If token is invalid, clear it
         localStorage.removeItem('token');
+        setCurrentUser(null);
+        setIsAuthenticated(false);
       } finally {
         setLoading(false);
       }
     };
 
     verifyToken();
+    
+    // Setup an interval to check token validity periodically
+    const checkTokenInterval = setInterval(() => {
+      const token = localStorage.getItem('token');
+      if (token) verifyToken();
+    }, 15 * 60 * 1000); // Check every 15 minutes
+    
+    return () => {
+      clearInterval(checkTokenInterval);
+    };
   }, []);
-
   const login = async (email, password) => {
     try {
       setError(null);
+      // Use the imported API module
       const response = await api.post('/auth/login', { email, password });
       const { token, user } = response.data;
       
@@ -69,6 +80,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       return { success: true };
     } catch (error) {
+      console.error('Login error:', error);
       setError(error.response?.data?.msg || 'Login failed. Please check your credentials.');
       return { 
         success: false, 
@@ -76,10 +88,10 @@ export const AuthProvider = ({ children }) => {
       };
     }
   };
-
   const register = async (name, email, password) => {
     try {
       setError(null);
+      // Use the imported API module
       const response = await api.post('/auth/register', { name, email, password });
       const { token, user } = response.data;
       
@@ -88,6 +100,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       return { success: true };
     } catch (error) {
+      console.error('Registration error:', error);
       setError(error.response?.data?.msg || 'Registration failed. Please try again.');
       return { 
         success: false, 
@@ -95,18 +108,46 @@ export const AuthProvider = ({ children }) => {
       };
     }
   };
-
   const logout = () => {
     localStorage.removeItem('token');
     setCurrentUser(null);
     setIsAuthenticated(false);
+  };  const demoLogin = async () => {
+    try {
+      setError(null);
+      console.log('Attempting demo login...');
+      // Try to login with the demo user first
+      const loginResponse = await login('demo@example.com', 'demo123');
+      if (loginResponse.success) {
+        console.log('Demo login successful');
+        return loginResponse;
+      }
+      
+      console.log('Demo login failed, trying to register...');
+      // If login fails, try to register the demo user
+      const registerResponse = await register('Demo User', 'demo@example.com', 'demo123');
+      if (registerResponse.success) {
+        console.log('Demo registration successful');
+        return registerResponse;
+      }
+      
+      // If both fail, return the error
+      console.log('Both demo login and registration failed');
+      return registerResponse;
+    } catch (error) {
+      console.error('Demo login/register error:', error);
+      setError(error.response?.data?.msg || 'Demo login failed');
+      return { success: false, error: error.response?.data?.msg || 'Demo login failed' };
+    }
   };
+  
   const value = {
     currentUser,
     isAuthenticated,
     login,
     register,
     logout,
+    demoLogin,
     loading,
     error,
     setError

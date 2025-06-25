@@ -62,9 +62,9 @@ const authenticateToken = async (req, res, next) => {
       
       req.user = mockUser;
       req.userId = mockUser._id;
-      return next();
-    }
+      return next();    }
     
+    // MongoDB flow
     const user = await User.findById(decoded.userId).select('-password');
     
     if (!user) {
@@ -116,9 +116,17 @@ const optionalAuth = async (req, res, next) => {
     if (!token) {
       req.user = null;
       return next();
+    }    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    if (global.mockDB) {
+      // Mock database flow
+      const mockUsers = global.mockUsers || [];
+      const mockUser = mockUsers.find(u => u._id === decoded.userId);
+      req.user = mockUser && mockUser.isActive !== false ? mockUser : null;
+      return next();
     }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // MongoDB flow
     const user = await User.findById(decoded.userId).select('-password');
     
     req.user = user && user.isActive ? user : null;

@@ -94,9 +94,9 @@ router.post('/register', [
           email: newUser.email,
           createdAt: newUser.createdAt
         }
-      });
-    }
-      // Regular MongoDB flow
+      });    }
+    
+    // MongoDB flow
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -215,8 +215,9 @@ router.post('/login', [
           email: user.email,
           lastLogin: user.lastLogin
         }
-      });
-    }    // Regular MongoDB flow
+      });    }
+    
+    // MongoDB flow
     // Check if user exists
     const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password');
     
@@ -225,10 +226,8 @@ router.post('/login', [
         success: false,
         msg: 'Invalid email or password'
       });
-    }
-
-    // Check password using model method
-    const isPasswordValid = await user.matchPassword(password);
+    }    // Check password using model method
+    const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       return res.status(400).json({
         success: false,
@@ -271,44 +270,6 @@ router.post('/login', [
   }
 });
 
-
-router.get('/me', async (req, res) => {
-  try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        msg: 'No token provided'
-      });
-    }    const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await User.findById(decoded.userId).select('-password');
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        msg: 'User not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        createdAt: user.createdAt,        lastLogin: user.lastLogin
-      }
-    });
-  } catch (error) {
-    console.error('Auth verification error:', error);
-    res.status(401).json({
-      success: false,
-      msg: 'Token is not valid'
-    });
-  }
-});
-
 // @route   GET /api/auth/me
 // @desc    Get user profile
 // @access  Private
@@ -334,8 +295,7 @@ router.get('/me', auth, async (req, res) => {
           email: user.email,
           createdAt: user.createdAt
         }
-      });
-    }
+      });    }
 
     // MongoDB flow
     const user = await User.findById(req.userId).select('-password');

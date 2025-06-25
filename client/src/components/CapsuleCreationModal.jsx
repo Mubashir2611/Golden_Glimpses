@@ -37,12 +37,11 @@ const CapsuleCreationModal = ({ open, onClose, onSuccess }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
-  // Form data
+    // Form data
   const [capsuleData, setCapsuleData] = useState({
     name: '',
     description: '',
-    unlockDate: format(addDays(new Date(), 30), 'yyyy-MM-dd'),
+    unlockDate: addDays(new Date(), 30).toISOString(),
     isPublic: false,
     tags: [],
     theme: 'default'
@@ -56,14 +55,13 @@ const CapsuleCreationModal = ({ open, onClose, onSuccess }) => {
       setError('Please add at least one media file');
       return;
     }
-    
-    if (activeStep === 1) {
-      if (!capsuleData.name.trim()) {
-        setError('Please enter a capsule name');
+      if (activeStep === 1) {
+      if (!capsuleData.name.trim() || capsuleData.name.trim().length < 2) {
+        setError('Please enter a capsule name (at least 2 characters)');
         return;
       }
-      if (!capsuleData.description.trim()) {
-        setError('Please enter a description');
+      if (!capsuleData.description.trim() || capsuleData.description.trim().length < 10) {
+        setError('Please enter a description (at least 10 characters)');
         return;
       }
       if (new Date(capsuleData.unlockDate) <= new Date()) {
@@ -107,9 +105,7 @@ const CapsuleCreationModal = ({ open, onClose, onSuccess }) => {
       
       if (uploadedFiles.length === 0) {
         throw new Error('Please upload at least one media file');
-      }
-
-      // Create capsule with media URLs
+      }      // Create capsule with media URLs
       const capsulePayload = {
         ...capsuleData,
         mediaUrls: uploadedFiles.map(file => ({
@@ -120,6 +116,7 @@ const CapsuleCreationModal = ({ open, onClose, onSuccess }) => {
         }))
       };
 
+      console.log('Sending capsule payload:', capsulePayload);
       const response = await capsuleAPI.createCapsule(capsulePayload);
       
       if (response.data.success) {
@@ -130,7 +127,18 @@ const CapsuleCreationModal = ({ open, onClose, onSuccess }) => {
       }
     } catch (err) {
       console.error('Error creating capsule:', err);
-      setError(err.message || 'Failed to create capsule. Please try again.');
+      console.error('Error response:', err.response?.data);
+      
+      let errorMessage = 'Failed to create capsule. Please try again.';
+      if (err.response?.data?.errors) {
+        errorMessage = err.response.data.errors.map(e => e.msg).join(', ');
+      } else if (err.response?.data?.msg) {
+        errorMessage = err.response.data.msg;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -138,11 +146,10 @@ const CapsuleCreationModal = ({ open, onClose, onSuccess }) => {
 
   const handleClose = () => {
     // Reset all state
-    setActiveStep(0);
-    setCapsuleData({
+    setActiveStep(0);    setCapsuleData({
       name: '',
       description: '',
-      unlockDate: format(addDays(new Date(), 30), 'yyyy-MM-dd'),
+      unlockDate: addDays(new Date(), 30).toISOString(),
       isPublic: false,
       tags: [],
       theme: 'default'
@@ -222,16 +229,24 @@ const CapsuleCreationModal = ({ open, onClose, onSuccess }) => {
                 '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.7)' },
                 '& .MuiInputBase-input': { color: 'white' },
               }}
-            />
-
-            <TextField
+            />            <TextField
               margin="dense"
               label="Unlock Date"
               type="date"
               fullWidth
               variant="outlined"
-              value={capsuleData.unlockDate}
-              onChange={(e) => setCapsuleData(prev => ({ ...prev, unlockDate: e.target.value }))}
+              value={capsuleData.unlockDate ? format(new Date(capsuleData.unlockDate), 'yyyy-MM-dd') : ''}
+              onChange={(e) => {
+                const dateValue = e.target.value;
+                if (dateValue) {
+                  // Convert to ISO string for storage
+                  const isoDate = new Date(dateValue + 'T23:59:59').toISOString();
+                  setCapsuleData(prev => ({ ...prev, unlockDate: isoDate }));
+                }
+              }}
+              inputProps={{
+                min: format(addDays(new Date(), 1), 'yyyy-MM-dd')
+              }}
               InputLabelProps={{ shrink: true }}
               sx={{
                 mb: 2,

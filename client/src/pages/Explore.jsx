@@ -50,9 +50,8 @@ const Explore = () => {
             id: capsule._id,
             title: capsule.name,
             creatorName: capsule.creator?.name || 'Anonymous',
-            description: capsule.description,
-            thumbnailUrl: capsule.memories && capsule.memories[0]?.content?.fileUrl 
-              ? `http://localhost:5001${capsule.memories[0].content.fileUrl}`
+            description: capsule.description,            thumbnailUrl: capsule.memories && capsule.memories[0]?.content?.fileUrl 
+              ? `http://localhost:5000${capsule.memories[0].content.fileUrl}`
               : '/public/assets/images/slides.jpg',
             createdAt: new Date(capsule.createdAt),
             unlockDate: new Date(capsule.unlockDate),

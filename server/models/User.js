@@ -1,102 +1,127 @@
-import express from 'express';
-import User from '../models/User.js';
-import { authenticateToken as auth } from '../middleware/auth.js';
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
-// Mock database for users
-const getMockUsers = () => {
+const userSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: [true, 'Name is required'],
+    trim: true,
+    minlength: [2, 'Name must be at least 2 characters long'],
+    maxlength: [50, 'Name cannot exceed 50 characters']
+  },
+  email: {
+    type: String,
+    required: [true, 'Email is required'],
+    unique: true,
+    lowercase: true,
+    trim: true,
+    match: [
+      /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+      'Please provide a valid email address'
+    ]
+  },
+  password: {
+    type: String,
+    required: [true, 'Password is required'],
+    minlength: [6, 'Password must be at least 6 characters long'],
+    select: false // Don't include password in queries by default
+  },
+  avatar: {
+    type: String,
+    default: null
+  },
+  bio: {
+    type: String,
+    maxlength: [500, 'Bio cannot exceed 500 characters']
+  },
+  preferences: {
+    notifications: {
+      email: {
+        type: Boolean,
+        default: true
+      },
+      capsuleReminders: {
+        type: Boolean,
+        default: true
+      }
+    },
+    privacy: {
+      profileVisibility: {
+        type: String,
+        enum: ['public', 'private'],
+        default: 'public'
+      }
+    }
+  },
+  statistics: {
+    capsulesCreated: {
+      type: Number,
+      default: 0
+    },
+    capsulesUnlocked: {
+      type: Number,
+      default: 0
+    },
+    totalMemories: {
+      type: Number,
+      default: 0
+    }
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  lastLogin: {
+    type: Date,
+    default: Date.now
+  }
+}, {
+  timestamps: true,
+  toJSON: {
+    transform: function(doc, ret) {
+      delete ret.password;
+      return ret;
+    }
+  }
+});
+
+// Pre-save middleware to hash password
+userSchema.pre('save', async function(next) {
+  // Only hash the password if it has been modified (or is new)
+  if (!this.isModified('password')) return next();
+
   try {
-    return global.mockUsers || [];
-  } catch (e) {
-    return [];
+    // Hash password with cost of 12
+    const hashedPassword = await bcrypt.hash(this.password, 12);
+    this.password = hashedPassword;
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Instance method to check password
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  try {
+    return await bcrypt.compare(candidatePassword, this.password);
+  } catch (error) {
+    throw new Error('Password comparison failed');
   }
 };
 
-const router = express.Router();
+// Instance method to update last login
+userSchema.methods.updateLastLogin = function() {
+  this.lastLogin = new Date();
+  return this.save();
+};
 
-// @route   GET /api/users/profile
-// @desc    Get user profile
-// @access  Private
-router.get('/profile', auth, async (req, res) => {
-  try {
-    if (global.mockDB) {
-      // Mock database flow
-      const mockUsers = getMockUsers();
-      const user = mockUsers.find(u => u._id === req.userId);
-      
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          msg: 'User not found'
-        });
-      }
+// Static method to find user by email
+userSchema.statics.findByEmail = function(email) {
+  return this.findOne({ email: email.toLowerCase() });
+};
 
-      // Return user without password
-      const { password, ...userProfile } = user;
-      return res.json({
-        success: true,
-        user: userProfile
-      });
-    }
-
-    // MongoDB flow
-    const user = await User.findById(req.userId).select('-password');
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        msg: 'User not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      user
-    });
-  } catch (error) {
-    console.error('Error fetching user profile:', error);
-    res.status(500).json({
-      success: false,
-      msg: 'Server error while fetching profile'
-    });
-  }
-});
-
-// @route   PUT /api/users/profile
-// @desc    Update user profile
-// @access  Private
-router.put('/profile', auth, async (req, res) => {
-  try {
-    const { name } = req.body;
-    
-    const user = await User.findById(req.userId);
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        msg: 'User not found'
-      });
-    }
-
-    if (name) user.name = name.trim();
-    
-    await user.save();
-
-    res.json({
-      success: true,
-      msg: 'Profile updated successfully',
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email
-      }
-    });
-  } catch (error) {
-    console.error('Error updating profile:', error);
-    res.status(500).json({
-      success: false,
-      msg: 'Server error while updating profile'
-    });
-  }
-});
-
-export default router;
+export default mongoose.model('User', userSchema);

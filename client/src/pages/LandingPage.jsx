@@ -27,10 +27,10 @@ import HorizontalBackgroundSlider from '../components/HorizontalBackgroundSlider
 
 const LandingPage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, login, register, user, logout } = useAuth();
+  const { isAuthenticated, login, register, demoLogin, currentUser, logout } = useAuth();
   const backgroundImages = [
     'public/assests/images/slides.jpg',
-    'public/assests/images/slides2.jpg',
+    'public/assests/images/new.jpg',
     'public/assests/images/slides4.jpg'
   ];
   
@@ -91,44 +91,67 @@ const LandingPage = () => {
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
+  const handleDemoLogin = async () => {
+    setLoading(true);
+    setError('');
 
+    try {
+      const result = await demoLogin();
+      if (result.success) {
+        handleCloseModal();
+        navigate('/dashboard');
+      } else {
+        setError(result.error || 'Demo login failed');
+      }
+    } catch (err) {
+      console.error('Demo login error:', err);
+      setError(err.message || 'Demo login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
+      let result;
       if (authMode === 'login') {
-        await login(formData.email, formData.password);
+        result = await login(formData.email, formData.password);
       } else {
-        await register(formData.name, formData.email, formData.password);
+        result = await register(formData.name, formData.email, formData.password);
       }
-      handleCloseModal();
-      navigate('/dashboard');
+      
+      if (result.success) {
+        handleCloseModal();
+        navigate('/dashboard');
+      } else {
+        setError(result.error || 'Authentication failed');
+      }
     } catch (err) {
+      console.error('Auth error:', err);
       setError(err.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }
   };
-
   const toggleAuthMode = () => {
     setAuthMode(authMode === 'login' ? 'register' : 'login');
     setError('');
-  };  return (
+  };return (
     <div className="min-h-screen w-full relative overflow-hidden responsive-text no-scroll">
       <HorizontalBackgroundSlider 
         images={backgroundImages}
         interval={5000}
         overlayOpacity={0.7}
       />
-      
-      <Navbar 
+        <Navbar 
         onShowAuth={handleShowAuth}
         isLoggedIn={isAuthenticated}
         onLogout={logout}
-        user={user}
-      />        <div 
+        user={currentUser}
+      /><div 
         className="h-screen w-full flex items-center justify-center relative no-scroll"
         style={{
           paddingTop: '80px', 
@@ -157,7 +180,6 @@ const LandingPage = () => {
               overflow: 'hidden'
             }}
           >
-            {/* Empty space - all content removed */}
           </Box>
         </Container>
       </div>
@@ -377,6 +399,35 @@ const LandingPage = () => {
                 >
                   {loading ? 'Please wait...' : (authMode === 'login' ? 'Sign In' : 'Create Account')}
                 </Button>
+                
+                {/* Demo Login Button */}
+                {authMode === 'login' && (
+                  <Button
+                    onClick={handleDemoLogin}
+                    fullWidth
+                    variant="outlined"
+                    disabled={loading}
+                    sx={{
+                      mt: 2,
+                      py: 1.5,
+                      fontSize: '0.9rem',
+                      fontWeight: 500,
+                      borderRadius: 2,
+                      borderColor: 'rgba(255, 255, 255, 0.3)',
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      '&:hover': {
+                        borderColor: 'rgba(255, 255, 255, 0.5)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                      },
+                      '&:disabled': {
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        color: 'rgba(255, 255, 255, 0.3)',
+                      },
+                    }}
+                  >
+                    🚀 Try Demo (demo@example.com)
+                  </Button>
+                )}
               </Box>
             </form>
 

@@ -2,8 +2,15 @@ import express from 'express';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
 import { authenticateToken as auth } from '../middleware/auth.js';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 
 const router = express.Router();
+
+// Get directory name (needed for ES modules)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Configure Cloudinary
 cloudinary.config({
@@ -34,10 +41,54 @@ const upload = multer({
 // @access  Private
 router.post('/upload', auth, upload.single('file'), async (req, res) => {
   try {
+    console.log('Media upload request received');
+    console.log('User ID:', req.userId);
+    console.log('File:', req.file ? req.file.originalname : 'No file');
+    
     if (!req.file) {
       return res.status(400).json({
         success: false,
         message: 'No file uploaded'
+      });
+    }
+
+    // Check if Cloudinary is configured
+    const isCloudinaryConfigured = process.env.CLOUDINARY_CLOUD_NAME && 
+    process.env.CLOUDINARY_API_KEY && 
+    process.env.CLOUDINARY_API_SECRET;    if (!isCloudinaryConfigured) {
+      // Mock upload for development - save file locally
+      console.log('Using mock upload - Cloudinary not configured');
+      
+      // Create uploads directory if it doesn't exist
+      const uploadsDir = path.join(__dirname, '..', 'uploads');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      
+      // Generate a unique filename
+      const timestamp = Date.now();
+      const fileExtension = req.file.mimetype.split('/')[1];
+      const fileName = `mock_${timestamp}.${fileExtension}`;
+      const filePath = path.join(uploadsDir, fileName);
+      
+      // Save file to local uploads directory
+      fs.writeFileSync(filePath, req.file.buffer);
+      
+      // Create URL that points to our local static file server
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const mockUrl = `${baseUrl}/uploads/${fileName}`;
+      
+      console.log('File saved locally:', filePath);
+      console.log('Mock URL:', mockUrl);
+      
+      return res.json({
+        success: true,
+        message: 'File uploaded successfully (mock)',
+        url: mockUrl,
+        publicId: `mock_${timestamp}`,
+        format: fileExtension,
+        resourceType: req.file.mimetype.startsWith('video/') ? 'video' : 'image',
+        bytes: req.file.size
       });
     }
 
@@ -110,6 +161,22 @@ router.delete('/:publicId', auth, async (req, res) => {
       error: error.message
     });
   }
+});
+
+// @route   GET /api/media/test
+// @desc    Test media upload authentication
+// @access  Private
+router.get('/test', auth, (req, res) => {
+  res.json({
+    success: true,
+    message: 'Authentication working',
+    userId: req.userId,
+    user: req.user ? {
+      id: req.user._id,
+      name: req.user.name,
+      email: req.user.email
+    } : null
+  });
 });
 
 export default router;

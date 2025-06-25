@@ -20,12 +20,19 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { notFound } from './middleware/notFound.js';
 import { displayNetworkInfo } from './utils/network.js';
 
-// Load environment variables
-dotenv.config();
-
 // Get directory name (needed for ES modules)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load environment variables with explicit path
+dotenv.config({ path: path.join(__dirname, '.env') });
+
+// Debug environment variable loading
+console.log('📋 Environment Debug:');
+console.log('  .env path:', path.join(__dirname, '.env'));
+console.log('  MONGODB_URI loaded:', !!process.env.MONGODB_URI);
+console.log('  NODE_ENV:', process.env.NODE_ENV || 'undefined');
+console.log('  CLOUDINARY_CLOUD_NAME loaded:', !!process.env.CLOUDINARY_CLOUD_NAME);
 
 const app = express();
 
@@ -68,9 +75,13 @@ const corsOptions = {
     'http://localhost:5174', 
     'http://localhost:5175', 
     'http://localhost:5176', 
-    'http://localhost:5177'
+    'http://localhost:5177',
+    // Allow all for development
+    '*'
   ],
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
@@ -152,12 +163,21 @@ const connectDB = async () => {
       console.log('✅ Mock database initialized - using in-memory data store\n');
       
       // Set up mock database flag and initialize arrays
-      global.mockDB = true;
-      global.mockUsers = global.mockUsers || [];
+      global.mockDB = true;      global.mockUsers = global.mockUsers || [
+        {
+          _id: 'mock-user-1',
+          name: 'Demo User',
+          email: 'demo@example.com',
+          password: '$2a$10$ncH72Yf5XHi8vPgUi6sZ6eBGBd.9fH3aAJz3t8Vj1.asp9af3COrm', // Hash for "demo123"
+          isActive: true,
+          createdAt: new Date(),
+          lastLogin: new Date()
+        }
+      ];
       global.mockCapsules = global.mockCapsules || [];
       global.mockMemories = global.mockMemories || [];
       
-      return { connection: { host: 'mock-database' } };
+      console.log('✅ Mock user created:', global.mockUsers[0].email);
     }
     
     // Handle connection events

@@ -15,86 +15,6 @@ const getMockCapsules = () => {
 
 const router = express.Router();
 
-// @route   GET /api/capsules/public
-// @desc    Get public capsules for explore page
-// @access  Public
-router.get('/public', async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 12;
-    const search = req.query.search || '';
-    
-    if (global.mockDB) {
-      // Mock database flow
-      const mockCapsules = getMockCapsules();
-      const publicCapsules = mockCapsules.filter(capsule => 
-        capsule.isPublic && 
-        (search === '' || 
-         capsule.name.toLowerCase().includes(search.toLowerCase()) ||
-         capsule.description.toLowerCase().includes(search.toLowerCase())
-        )
-      );
-      
-      const startIndex = (page - 1) * limit;
-      const endIndex = startIndex + limit;
-      const paginatedCapsules = publicCapsules.slice(startIndex, endIndex);
-      
-      return res.json({
-        success: true,
-        capsules: paginatedCapsules,
-        pagination: {
-          page,
-          limit,
-          total: publicCapsules.length,
-          pages: Math.ceil(publicCapsules.length / limit)
-        }
-      });
-    }
-
-    // MongoDB flow
-    const skip = (page - 1) * limit;
-    const searchQuery = search ? {
-      $or: [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { tags: { $in: [new RegExp(search, 'i')] } }
-      ]
-    } : {};
-
-    const query = {
-      isPublic: true,
-      unlocked: true, // Only show unlocked public capsules
-      ...searchQuery
-    };
-
-    const capsules = await Capsule.find(query)
-      .populate('owner', 'name email')
-      .populate('memories')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    const total = await Capsule.countDocuments(query);
-
-    res.json({
-      success: true,
-      capsules,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching public capsules:', error);
-    res.status(500).json({
-      success: false,
-      msg: 'Server error while fetching public capsules'
-    });
-  }
-});
-
 // @route   GET /api/capsules
 // @desc    Get all capsules for authenticated user
 // @access  Private
@@ -235,8 +155,12 @@ router.post('/', [
     })
 ], async (req, res) => {
   try {
+    console.log('🔍 Creating capsule - Request body:', JSON.stringify(req.body, null, 2));
+    console.log('🔍 User ID:', req.userId);
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('❌ Validation errors:', errors.array());
       return res.status(400).json({
         success: false,
         msg: 'Validation failed',
