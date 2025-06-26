@@ -62,8 +62,10 @@ cd ../client && npm install
 cd server
 cp .env.example .env
 # Edit .env with your credentials (app works with mock data by default)
-.env.example:
-`
+```
+#### .env.example:
+
+```
 # Server Configuration
 PORT=5000
 NODE_ENV=development
@@ -87,7 +89,6 @@ CORS_ORIGINS=http://localhost:3000,http://localhost:5173
 # File Upload Configuration
 MAX_FILE_SIZE=10485760
 ALLOWED_FILE_TYPES=image/jpeg,image/png,image/gif,video/mp4,video/webm 
-`
 ```
 
 ### 3. Start the Application
