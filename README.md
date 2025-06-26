@@ -62,6 +62,32 @@ cd ../client && npm install
 cd server
 cp .env.example .env
 # Edit .env with your credentials (app works with mock data by default)
+.env.example:
+`
+# Server Configuration
+PORT=5000
+NODE_ENV=development
+
+# MongoDB Configuration
+DB_USER=your_db_user
+DB_PASSWORD=your_db_password
+MONGODB_URI= mongodb+srv://<username>:<password>@<cluster-name>.mongodb.net/<databaseName>?retryWrites=true&w=majority&appName=<optionalAppName>
+# JWT Secret (Change this to a secure random string in production)
+JWT_SECRET=a_very_long_and_random_string_for_jwt_secret
+
+# Cloudinary Configuration
+CLOUDINARY_URL=cloudinary://your_cloudinary_api_key:your_cloudinary_api_secret@your_cloudinary_cloud_name
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+
+# CORS Origins
+CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+
+# File Upload Configuration
+MAX_FILE_SIZE=10485760
+ALLOWED_FILE_TYPES=image/jpeg,image/png,image/gif,video/mp4,video/webm 
+`
 ```
 
 ### 3. Start the Application
