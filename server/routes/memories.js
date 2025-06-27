@@ -1,6 +1,6 @@
 import express from 'express';
 import Memory from '../models/Memory.js';
-import { authenticateToken as auth } from '../middleware/auth.js';
+import { protect as auth } from '../middleware/auth.js';
 import { v4 as uuidv4 } from 'uuid';
 import multer from 'multer';
 import path from 'path';

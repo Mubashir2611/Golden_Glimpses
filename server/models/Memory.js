@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { v2 as cloudinary } from 'cloudinary'; // Import at the top
 
 const memorySchema = new mongoose.Schema({
   capsule: {
@@ -27,6 +28,10 @@ const memorySchema = new mongoose.Schema({
       maxlength: [5000, 'Text content cannot exceed 5000 characters']
     },
     fileUrl: {
+      type: String,
+      trim: true
+    },
+    publicId: {
       type: String,
       trim: true
     },
@@ -287,6 +292,50 @@ memorySchema.statics.findByLocation = function(longitude, latitude, maxDistance 
     isDeleted: { $ne: true }
   });
 };
+
+// Pre-remove hook to delete file from Cloudinary if applicable
+memorySchema.pre('remove', async function(next) {
+  if (this.content && this.content.publicId && !this.content.publicId.startsWith('mock_')) {
+    // Attempt to configure Cloudinary if not already configured and essential env vars are present
+    // This is a fallback, ideal configuration is at app startup.
+    if (!cloudinary.config().cloud_name && process.env.CLOUDINARY_CLOUD_NAME) {
+        cloudinary.config({
+            cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+            api_key: process.env.CLOUDINARY_API_KEY,
+            api_secret: process.env.CLOUDINARY_API_SECRET,
+            secure: true,
+        });
+    }
+      
+    if (!cloudinary.config().cloud_name) {
+      console.warn(`Cloudinary not configured. Skipping deletion of '${this.content.publicId}'. Ensure Cloudinary is configured at application startup.`);
+      return next(); // Important to return here if not configured
+    }
+
+    try {
+      console.log(`Attempting to delete '${this.content.publicId}' (type: '${this.type}') from Cloudinary.`);
+      
+      let resourceType = 'image'; // Default
+      if (this.type === 'video') resourceType = 'video';
+      else if (this.type === 'audio') resourceType = 'video'; // Cloudinary API uses 'video' for audio resource_type
+      else if (this.type === 'document') resourceType = 'raw'; // Documents are often 'raw'
+
+      await cloudinary.uploader.destroy(this.content.publicId, { resource_type: resourceType });
+      console.log(`Successfully deleted '${this.content.publicId}' from Cloudinary.`);
+      next();
+    } catch (err) {
+      console.error(`Failed to delete '${this.content.publicId}' from Cloudinary:`, err);
+      // Proceed with DB deletion even if Cloudinary fails, to prevent orphaned DB entries.
+      // To halt DB deletion on Cloudinary error, call next(err);
+      next(); 
+    }
+  } else {
+    if (this.content && this.content.publicId && this.content.publicId.startsWith('mock_')) {
+      console.log(`Skipping Cloudinary deletion for mock publicId '${this.content.publicId}'.`);
+    }
+    next();
+  }
+});
 
 const Memory = mongoose.model('Memory', memorySchema);
 

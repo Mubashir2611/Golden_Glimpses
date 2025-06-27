@@ -1,7 +1,7 @@
 {
   "name": "mern-time-capsule",
   "version": "1.0.0",
-  "description": "A full-stack time capsule application with drag-and-drop media upload",
+  "description": "A full-stack time capsule application",
   "main": "server/server.js",
   "scripts": {
     "install-all": "cd server && npm install && cd ../client && npm install",

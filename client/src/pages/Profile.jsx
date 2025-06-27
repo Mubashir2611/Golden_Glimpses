@@ -27,7 +27,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../utils/api'; // Import the API utility
 
 const Profile = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, setCurrentUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [userProfile, setUserProfile] = useState({
     name: '',
@@ -71,6 +71,9 @@ const Profile = () => {
       if (response.data.success) {
         setSuccess('Profile updated successfully');
         // Update the current user in auth context if needed
+        if (setCurrentUser && response.data.user) {
+          setCurrentUser(prev => ({ ...prev, ...response.data.user }));
+        }
         setIsEditing(false);
       } else {
         throw new Error(response.data.message || 'Failed to update profile');

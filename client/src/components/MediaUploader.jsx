@@ -27,7 +27,7 @@ import { mediaAPI } from '../utils/api';
 const MediaUploader = ({ 
   onFilesChange, 
   maxFiles = 10, 
-  maxSize = 50 * 1024 * 1024, // 50MB
+  maxSize = 50 * 1024 * 1024,
   acceptedTypes = {
     'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp'],
     'video/*': ['.mp4', '.webm', '.mov', '.avi']
@@ -70,6 +70,11 @@ const MediaUploader = ({
       const updatedFiles = [...files, ...newFiles].slice(0, maxFiles);
       setFiles(updatedFiles);
       onFilesChange(updatedFiles);
+      
+      // Automatically upload new files
+      setTimeout(() => {
+        uploadNewFiles(newFiles);
+      }, 100);
     }
   }, [files, maxFiles, onFilesChange]);
 
@@ -84,12 +89,85 @@ const MediaUploader = ({
     const formData = new FormData();
     formData.append('file', fileData.file);
 
+    console.log('uploadToCloudinary - uploading file:', fileData.name);
+
     try {
-      const response = await mediaAPI.uploadFile(formData);
-      return response.data.url;
+      const response = await mediaAPI.uploadFile(formData, (progressEvent) => {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        setUploadProgress(prev => ({ ...prev, [fileData.id]: percentCompleted }));
+      });
+      
+      console.log('uploadToCloudinary - response:', response.data);
+      
+      // Return the full response data from mediaAPI.uploadFile
+      return response.data;  
     } catch (err) {
-      console.error('Upload error:', err);
+      console.error('Upload error for file', fileData.name, ':', err.response?.data || err.message);
       throw err;
+    }
+  };
+
+  const uploadNewFiles = async (newFiles) => {
+    if (uploading) return; // Prevent multiple simultaneous uploads
+    
+    setUploading(true);
+    
+    const uploadPromises = newFiles.map(async (fileData) => {
+      try {
+        const uploadResponse = await uploadToCloudinary(fileData);
+        
+        if (uploadResponse && uploadResponse.success) {
+          return {
+            ...fileData,
+            uploaded: true,
+            cloudinaryUrl: uploadResponse.url,
+            publicId: uploadResponse.publicId,
+            format: uploadResponse.format,
+            resourceType: uploadResponse.resourceType,
+            bytes: uploadResponse.bytes,
+            error: null
+          };
+        } else {
+          return {
+            ...fileData,
+            uploaded: false,
+            error: uploadResponse ? uploadResponse.message : 'Upload failed without server message'
+          };
+        }
+      } catch (err) {
+        const errorMessage = err.response?.data?.message || err.message || 'Network error or upload failed';
+        return {
+          ...fileData,
+          uploaded: false,
+          error: errorMessage
+        };
+      }
+    });
+
+    try {
+      const results = await Promise.all(uploadPromises);
+      
+      // Update the files array with upload results
+      setFiles(prevFiles => {
+        const resultsMap = new Map(results.map(r => [r.id, r]));
+        const updatedFiles = prevFiles.map(file => resultsMap.get(file.id) || file);
+        
+        // Call onFilesChange with the updated files array
+        console.log('MediaUploader - calling onFilesChange with:', updatedFiles);
+        onFilesChange(updatedFiles);
+        
+        return updatedFiles;
+      });
+      
+      const failedUploads = results.filter(f => f.error && !f.uploaded);
+      if (failedUploads.length > 0) {
+        setErrors(prevErrors => [...prevErrors, ...failedUploads.map(f => `${f.name}: ${f.error}`)]);
+      }
+    } catch (e) {
+      setErrors(['Upload failed. Please try again.']);
+    } finally {
+      setUploading(false);
+      setUploadProgress({});
     }
   };
 
@@ -98,20 +176,37 @@ const MediaUploader = ({
     setErrors([]);
 
     const uploadPromises = files
-      .filter(f => !f.uploaded)
+      .filter(f => !f.uploaded && !f.error) // Don't re-upload errored files unless error is cleared
       .map(async (fileData) => {
         try {
-          const cloudinaryUrl = await uploadToCloudinary(fileData);
+          // uploadToCloudinary now returns the full response object from mediaAPI
+          const uploadResponse = await uploadToCloudinary(fileData); 
           
+          if (uploadResponse && uploadResponse.success) {
+            return {
+              ...fileData,
+              uploaded: true,
+              cloudinaryUrl: uploadResponse.url, // Main URL
+              publicId: uploadResponse.publicId, // Capture publicId
+              format: uploadResponse.format,
+              resourceType: uploadResponse.resourceType,
+              bytes: uploadResponse.bytes, // Actual size from Cloudinary
+              error: null
+            };
+          } else {
+            return {
+              ...fileData,
+              uploaded: false,
+              error: uploadResponse ? uploadResponse.message : 'Upload failed without server message'
+            };
+          }
+        } catch (err) {
+          // err from uploadToCloudinary might already have response data
+          const errorMessage = err.response?.data?.message || err.message || 'Network error or upload failed';
           return {
             ...fileData,
-            uploaded: true,
-            cloudinaryUrl,
-            error: null
-          };        } catch (err) {
-          return {
-            ...fileData,
-            error: err.message
+            uploaded: false,
+            error: errorMessage
           };
         }
       });
@@ -119,18 +214,22 @@ const MediaUploader = ({
     try {
       const results = await Promise.all(uploadPromises);
       
-      const updatedFiles = files.map(file => {
-        const result = results.find(r => r.id === file.id);
-        return result || file;
-      });
+      // Create a map of results for efficient lookup
+      const resultsMap = new Map(results.map(r => [r.id, r]));
 
-      setFiles(updatedFiles);
-      onFilesChange(updatedFiles);
+      const updatedFiles = files.map(file => {
+        // If the file was part of this upload batch, use its result, otherwise keep existing data
+        return resultsMap.get(file.id) || file;
+      });
       
-      const failedUploads = results.filter(r => r.error);
+      setFiles(updatedFiles);
+      onFilesChange(updatedFiles); // Propagate files with detailed upload info
+      
+      const failedUploads = updatedFiles.filter(f => f.error && !f.uploaded); // Check for errors on files that didn't upload
       if (failedUploads.length > 0) {
-        setErrors(failedUploads.map(f => `${f.name}: ${f.error}`));
-      }    } catch {
+        setErrors(prevErrors => [...prevErrors, ...failedUploads.map(f => `${f.name}: ${f.error}`)]);
+      }
+    } catch (e) { // Catch errors from Promise.all itself, though individual errors are handled above
       setErrors(['Upload failed. Please try again.']);
     } finally {
       setUploading(false);
@@ -242,7 +341,7 @@ const MediaUploader = ({
           </Typography>
           
           <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 2 }}>
-            or click to browse your files
+            Files will be uploaded automatically • or click to browse
           </Typography>
           
           <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, flexWrap: 'wrap' }}>
@@ -416,8 +515,8 @@ const MediaUploader = ({
                 ))}
               </Grid>
 
-              {/* Upload Button */}
-              {files.some(f => !f.uploaded) && (
+              {/* Upload Button - Only show for failed uploads */}
+              {files.some(f => !f.uploaded && f.error) && (
                 <Button
                   variant="contained"
                   onClick={uploadAllFiles}
@@ -433,8 +532,16 @@ const MediaUploader = ({
                     },
                   }}
                 >
-                  {uploading ? 'Uploading...' : `Upload ${files.filter(f => !f.uploaded).length} Files`}
+                  {uploading ? 'Uploading...' : `Retry Failed Uploads`}
                 </Button>
+              )}
+              
+              {/* Upload Status */}
+              {files.length > 0 && (
+                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', mt: 1 }}>
+                  {files.filter(f => f.uploaded).length} of {files.length} files uploaded successfully
+                  {uploading && ' • Uploading in progress...'}
+                </Typography>
               )}
             </Box>
           </motion.div>

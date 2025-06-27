@@ -24,7 +24,9 @@ import {
   CalendarMonth as CalendarIcon,
   ArrowBack as BackIcon,
   ArrowForward as ForwardIcon,
-  Check as CheckIcon
+  Check as CheckIcon,
+  Image as ImageIcon,
+  VideoFile as VideoIcon
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -32,26 +34,11 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { addMonths, format } from 'date-fns';
 import DashboardLayout from '../layouts/DashboardLayout';
-import CapsuleUploader from '../features/capsules/CapsuleUploader';
+// import CapsuleUploader from '../features/capsules/CapsuleUploader'; // Assuming this is MediaUploader or similar
+import MediaUploader from '../components/MediaUploader'; // Using the MediaUploader we reviewed
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-
-// Create axios instance with base URL
-const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
-});
-
-// Add token to requests if available
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+// import axios from 'axios'; // Remove local axios instance
+import { capsuleAPI } from '../utils/api'; // Import the shared API utility
 
 const steps = ['Details', 'Add Media', 'Review & Seal'];
 
@@ -85,12 +72,11 @@ const CreateCapsule = () => {
       });
       return;
     }
-    
-    if (activeStep === 0) {
-      // Create capsule when moving to step 2
-      createCapsule();
-    }
-    
+    // Capsule creation is now deferred to the final step.
+    // if (activeStep === 0) {
+    //   // Create capsule when moving to step 2
+    //   createCapsule(); 
+    // }
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
   };
   
@@ -109,7 +95,9 @@ const CreateCapsule = () => {
       theme: 'default'
     });
     setUploadedFiles([]);
-    setCapsuleId(null);
+    // setCapsuleId(null); // No longer creating capsule prematurely
+    setSubmissionError(null);
+    setIsSubmitting(false);
   };
   
   const handleChange = (e) => {
@@ -137,77 +125,71 @@ const CreateCapsule = () => {
            capsuleData.unlockDate > new Date();
   };
   
-  const createCapsule = async () => {
-    setIsSubmitting(true);
-    setSubmissionError(null);
-    
-    try {
-      // Format data for API
-      const capsulePayload = {
-        name: capsuleData.title,
-        description: capsuleData.description,
-        unlockDate: capsuleData.unlockDate,
-        isPublic: capsuleData.isPublic,
-        tags: capsuleData.tags.length > 0 ? capsuleData.tags : [],
-        theme: capsuleData.theme
-      };
-      
-      const response = await api.post('/capsules', capsulePayload);
-      
-      if (response.data.success) {
-        setCapsuleId(response.data.capsule._id);
-        setSnackbar({
-          open: true,
-          message: 'Capsule created successfully! Now add your memories.',
-          severity: 'success'
-        });
-      } else {
-        throw new Error(response.data.msg || 'Failed to create capsule');
-      }
-    } catch (error) {
-      console.error('Error creating capsule:', error);
-      setSubmissionError(error.response?.data?.msg || 'Failed to create the capsule. Please try again.');
-      
-      // Allow to continue with mock data for demonstration purposes
-      setCapsuleId(`mock-${Date.now()}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-  
+  // const createCapsule = async () => { ... }; // This function is removed or repurposed for the final submission.
+
   const handleFilesChange = (files) => {
-    setUploadedFiles(files);
+    // Files from MediaUploader will have cloudinaryUrl, publicId, etc.
+    setUploadedFiles(files); 
   };
   
   const handleSubmitCapsule = async () => {
     setIsSubmitting(true);
     setSubmissionError(null);
+
+    // Ensure all files intended for upload are actually uploaded
+    const pendingUploads = uploadedFiles.filter(f => !f.uploaded && !f.error);
+
+    if (pendingUploads.length > 0) {
+      setSubmissionError("Some files haven't been uploaded yet. Please upload all files or remove them before sealing.");
+      setIsSubmitting(false);
+      setSnackbar({
+        open: true,
+        message: "Please upload all selected files first.",
+        severity: 'warning'
+      });
+      return;
+    }
+    
+    // Note: Media will be handled separately through the media upload endpoint
+    
+    const capsulePayload = {
+      title: capsuleData.title, // Changed from 'name' to 'title'
+      description: capsuleData.description,
+      unlockDate: capsuleData.unlockDate.toISOString(), // Backend will handle both unlockDate/unsealingDate
+      isPublic: capsuleData.isPublic,
+      // Remove fields not expected by backend
+      // tags: capsuleData.tags.filter(tag => tag.trim() !== ''),
+      // theme: capsuleData.theme,
+      // mediaUrls: mediaUrlsForApi
+    };
     
     try {
-      // In a real implementation, we would upload all files to the memories API
-      // For now, we'll just simulate success
+      const response = await capsuleAPI.createCapsule(capsulePayload);
       
-      setTimeout(() => {
+      // Backend returns the capsule object directly
+      if (response.data) {
         setSnackbar({
           open: true,
-          message: 'Your time capsule has been sealed! It will be available on the unlock date.',
+          message: 'Your time capsule has been created! You can add media and seal it.',
           severity: 'success'
         });
-        
-        setIsSubmitting(false);
         
         // Navigate to dashboard after short delay
         setTimeout(() => {
           navigate('/dashboard');
         }, 2000);
-      }, 1500);
+      } else {
+        throw new Error('Failed to create the capsule');
+      }
     } catch (error) {
-      console.error('Error finalizing capsule:', error);
-      setSubmissionError('Failed to seal the time capsule. Please try again.');
+      console.error('Error sealing capsule:', error);
+      setSubmissionError(error.response?.data?.msg || error.message || 'Failed to seal the time capsule. Please try again.');
+    } finally {
       setIsSubmitting(false);
     }
   };
-    return (
+
+  return (
     <DashboardLayout>
       <Box sx={{ pb: 6 }}>
         {submissionError && (
@@ -434,15 +416,15 @@ const CreateCapsule = () => {
                           <FormControlLabel
                             control={
                               <Switch 
-                                checked={capsuleData.isPrivate} 
+                                checked={capsuleData.isPublic} // Corrected from isPrivate
                                 onChange={handleChange}
-                                name="isPrivate"
+                                name="isPublic" // Corrected from isPrivate
                                 color="primary"
                               />
                             }
-                            label="Private capsule"
+                            label="Publicly visible capsule" // Corrected label
                           />
-                          <Tooltip title="Private capsules are only visible to you. Public capsules can be shared with a link.">
+                          <Tooltip title="Public capsules can be seen by others in the Explore feed once unlocked. Private capsules are only for you.">
                             <IconButton size="small" sx={{ ml: 1, color: 'rgba(255, 255, 255, 0.5)' }}>
                               <InfoIcon fontSize="small" />
                             </IconButton>
@@ -486,7 +468,7 @@ const CreateCapsule = () => {
                           </Typography>
                           <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                             Your capsule will unlock on:<br />
-                            <strong>{format(capsuleData.unlockDate, 'MMMM dd, yyyy')}</strong>
+                            <strong>{format(capsuleData.unlockDate, 'MMMM dd, yyyy \'at\' h:mm a')}</strong>
                           </Typography>
                         </Box>
                         
@@ -500,7 +482,10 @@ const CreateCapsule = () => {
               </Box>
             ) : activeStep === 1 ? (
               /* Step 2: Add Media */
-              <CapsuleUploader capsuleId="new" capsuleTitle={capsuleData.title} />
+              <MediaUploader 
+                onFilesChange={handleFilesChange} 
+                // Pass other props like maxFiles, maxSize if needed
+              />
             ) : (
               /* Step 3: Review & Seal */
               <Box>
@@ -548,7 +533,7 @@ const CreateCapsule = () => {
                             Unlock Date
                           </Typography>
                           <Typography variant="body1">
-                            {format(capsuleData.unlockDate, 'MMMM dd, yyyy')}
+                            {format(capsuleData.unlockDate, 'MMMM dd, yyyy \'at\' h:mm a')}
                           </Typography>
                         </Box>
                         

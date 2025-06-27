@@ -29,6 +29,9 @@ const LandingPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated, login, register, demoLogin, currentUser, logout } = useAuth();
   const backgroundImages = [
+    '/public/assests/images/slides.jpg',
+    '/public/assests/images/slides2.jpg',
+    '/public/assests/images/slides4.jpg',
   ];
   
   const [showAuthModal, setShowAuthModal] = useState(false);

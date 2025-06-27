@@ -29,10 +29,14 @@ import {
   Security as SecurityIcon,
   BrushOutlined as ThemeIcon,
   DeleteForever as DeleteIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  LightMode as LightModeIcon,
+  DarkMode as DarkModeIcon,
+  SettingsBrightness as SystemModeIcon
 } from '@mui/icons-material';
 import DashboardLayout from '../layouts/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../hooks/useTheme';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api'; // Import the API utility
 
@@ -58,13 +62,12 @@ function TabPanel(props) {
 
 const Settings = () => {
   const [tabValue, setTabValue] = useState(0);
+  const { themeMode, setTheme, actualTheme } = useTheme();
   const [settings, setSettings] = useState({
     emailNotifications: true,
     newCapsuleReminders: true,
     capsuleUnlockAlerts: true,
     autoplayMedia: true,
-    darkMode: true,
-    theme: 'dark',
     language: 'en'
   });
   const [snackbar, setSnackbar] = useState({
@@ -92,6 +95,41 @@ const Settings = () => {
       message: 'Setting updated',
       severity: 'success'
     });
+  };
+
+  const handleThemeChange = (newTheme) => {
+    setTheme(newTheme);
+    setSnackbar({
+      open: true,
+      message: `Theme changed to ${newTheme}`,
+      severity: 'success'
+    });
+  };
+
+  const getThemeIcon = (theme) => {
+    switch (theme) {
+      case 'light':
+        return <LightModeIcon />;
+      case 'dark':
+        return <DarkModeIcon />;
+      case 'system':
+        return <SystemModeIcon />;
+      default:
+        return <SystemModeIcon />;
+    }
+  };
+
+  const getThemeDescription = (theme) => {
+    switch (theme) {
+      case 'light':
+        return 'Always use light theme';
+      case 'dark':
+        return 'Always use dark theme';
+      case 'system':
+        return 'Follow system settings';
+      default:
+        return 'Follow system settings';
+    }
   };
   
   const handleSnackbarClose = () => {
@@ -214,43 +252,47 @@ const Settings = () => {
           <TabPanel value={tabValue} index={1}>
             <Grid container spacing={3}>
               <Grid item xs={12}>
-                <ListItem>
-                  <ListItemText 
-                    primary="Dark Mode" 
-                    secondary="Use dark theme for the application" 
-                  />
-                  <ListItemSecondaryAction>
-                    <Switch 
-                      checked={settings.darkMode}
-                      onChange={handleSettingChange('darkMode')}
-                      edge="end"
-                      color="primary"
-                    />
-                  </ListItemSecondaryAction>
-                </ListItem>
+                <Typography variant="h6" sx={{ mb: 2, fontWeight: 'medium' }}>
+                  Theme Settings
+                </Typography>
                 
-                <Divider sx={{ my: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 2, color: 'text.secondary' }}>
+                    Current theme: {themeMode} ({actualTheme} mode active)
+                  </Typography>
+                  
+                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                    {['light', 'dark', 'system'].map((theme) => (
+                      <Button
+                        key={theme}
+                        variant={themeMode === theme ? 'contained' : 'outlined'}
+                        startIcon={getThemeIcon(theme)}
+                        onClick={() => handleThemeChange(theme)}
+                        sx={{
+                          minWidth: 140,
+                          height: 56,
+                          flexDirection: 'column',
+                          gap: 0.5,
+                          '& .MuiButton-startIcon': {
+                            margin: 0
+                          }
+                        }}
+                      >
+                        <Typography variant="caption" sx={{ textTransform: 'capitalize' }}>
+                          {theme}
+                        </Typography>
+                        <Typography variant="caption" sx={{ fontSize: '0.7rem', opacity: 0.8 }}>
+                          {getThemeDescription(theme)}
+                        </Typography>
+                      </Button>
+                    ))}
+                  </Box>
+                </Box>
+                
+                <Divider sx={{ my: 3, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
               </Grid>
               
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel id="theme-label">Theme</InputLabel>
-                  <Select
-                    labelId="theme-label"
-                    id="theme-select"
-                    value={settings.theme}
-                    label="Theme"
-                    onChange={handleSettingChange('theme')}
-                  >
-                    <MenuItem value="dark">Dark</MenuItem>
-                    <MenuItem value="light">Light</MenuItem>
-                    <MenuItem value="system">System Default</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
               <Grid item xs={12}>
-                <Divider sx={{ my: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
-                
                 <ListItem>
                   <ListItemText 
                     primary="Autoplay Media" 

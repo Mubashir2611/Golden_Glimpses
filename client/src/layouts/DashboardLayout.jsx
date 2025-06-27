@@ -64,7 +64,7 @@ const DashboardLayout = ({ children }) => {
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'Create New Capsule', icon: <AddIcon />, path: '/create-capsule' },
-    { text: 'Explore Capsules', icon: <ExploreIcon />, path: '/explore' },
+    { text: 'Memories', icon: <ExploreIcon />, path: '/explore' },
     { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
   ];
   

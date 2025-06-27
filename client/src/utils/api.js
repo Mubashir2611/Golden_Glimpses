@@ -5,7 +5,8 @@ const api = axios.create({
   baseURL: 'http://localhost:5000/api',
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  timeout: 10000 // 10 second timeout
 });
 
 // Add token to requests if available
@@ -46,23 +47,115 @@ export const formatTimeRemaining = (unlockDate) => {
 
 // Auth API calls
 export const authAPI = {
-  login: (email, password) => api.post('/auth/login', { email, password }),
-  register: (name, email, password) => api.post('/auth/register', { name, email, password }),
+  login: async (email, password) => {
+    console.log('🔐 Attempting login for:', email);
+    try {
+      const response = await api.post('/auth/login', { email, password });
+      console.log('✅ Login successful');
+      return response;
+    } catch (error) {
+      console.error('❌ Login failed:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+  register: async (name, email, password) => {
+    console.log('📝 Attempting registration for:', email);
+    try {
+      const response = await api.post('/auth/register', { name, email, password });
+      console.log('✅ Registration successful');
+      return response;
+    } catch (error) {
+      console.error('❌ Registration failed:', error.response?.data || error.message);
+      throw error;
+    }
+  },
   getProfile: () => api.get('/auth/me'),
+  refreshToken: (refreshToken) => api.post('/auth/refresh', { refreshToken }),
 };
+
+// Variable to prevent multiple concurrent refresh attempts
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+// Response interceptor for API calls
+api.interceptors.response.use(
+  response => response,
+  async (error) => {
+    const originalRequest = error.config;
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise(function(resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        }).then(token => {
+          originalRequest.headers['Authorization'] = 'Bearer ' + token;
+          return axios(originalRequest); // Use global axios for retrying to avoid self-interception loop with 'api'
+        }).catch(err => {
+          return Promise.reject(err);
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+      
+      const localRefreshToken = localStorage.getItem('refreshToken');
+      if (!localRefreshToken) {
+        isRefreshing = false;
+        // logoutUser(); // Implement a global logoutUser function or event
+        console.error("No refresh token available, logging out.");
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        window.location.href = '/'; // Redirect to login
+        return Promise.reject(error);
+      }
+
+      try {
+        const rs = await authAPI.refreshToken(localRefreshToken);
+        const { accessToken } = rs.data;
+        localStorage.setItem('token', accessToken);
+        api.defaults.headers.common['Authorization'] = 'Bearer ' + accessToken;
+        originalRequest.headers['Authorization'] = 'Bearer ' + accessToken;
+        processQueue(null, accessToken);
+        return api(originalRequest); // Retry with the main 'api' instance
+      } catch (_error) {
+        processQueue(_error, null);
+        // logoutUser(); // Implement a global logoutUser function or event
+        console.error("Refresh token failed or expired, logging out.", _error.response?.data || _error.message);
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        window.location.href = '/'; // Redirect to login
+        return Promise.reject(_error);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Capsules API calls
 export const capsuleAPI = {
-  getAllCapsules: () => api.get('/capsules'),
+  getAllCapsules: () => api.get('/capsules/my-capsules'),
   getCapsuleById: (id) => api.get(`/capsules/${id}`),
   createCapsule: (capsuleData) => api.post('/capsules', capsuleData),
+  sealCapsule: (id) => api.put(`/capsules/${id}/seal`),
   updateCapsule: (id, capsuleData) => api.put(`/capsules/${id}`, capsuleData),
   deleteCapsule: (id) => api.delete(`/capsules/${id}`),
   unlockCapsule: (id) => api.post(`/capsules/${id}/unlock`),
   likeCapsule: (id) => api.post(`/capsules/${id}/like`),
   unlikeCapsule: (id) => api.post(`/capsules/${id}/unlike`),
-  getPublicCapsules: (page = 1, search = '') => 
-    api.get('/capsules/public', { params: { page, search } }),
+  getPublicCapsules: (page = 1, limit = 10, search = '') => // Added limit
+    api.get('/capsules/explore', { params: { page, limit, search } }), // Corrected endpoint
 };
 
 // Memories API calls
@@ -85,6 +178,19 @@ export const mediaAPI = {
       onUploadProgress
     }),
   deleteFile: (publicId) => api.delete(`/media/${publicId}`),
+};
+
+// Stories API calls
+export const storiesAPI = {
+  getStoriesTray: () => api.get('/stories/tray'),
+  getUserStories: (userId) => api.get(`/stories/user/${userId}`),
+  getMyStories: () => api.get('/stories/my-stories'),
+  createStory: (formData) => 
+    api.post('/stories', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  deleteStory: (storyId) => api.delete(`/stories/${storyId}`),
+  likeStory: (storyId) => api.put(`/stories/${storyId}/like`),
 };
 
 export default api;

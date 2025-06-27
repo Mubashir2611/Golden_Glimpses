@@ -1,13 +1,30 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { IconButton } from '@mui/material';
+import { LightMode as LightModeIcon, DarkMode as DarkModeIcon, SettingsBrightness as SystemModeIcon } from '@mui/icons-material';
+import { useTheme } from '../hooks/useTheme';
 import './Navbar.css';
 
 const Navbar = ({ onShowAuth, isLoggedIn, onLogout, user }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const { themeMode, toggleTheme } = useTheme();
   
   const toggleUserMenu = () => {
     setShowUserMenu(!showUserMenu);
+  };
+
+  const getThemeIcon = () => {
+    switch (themeMode) {
+      case 'light':
+        return <LightModeIcon />;
+      case 'dark':
+        return <DarkModeIcon />;
+      case 'system':
+        return <SystemModeIcon />;
+      default:
+        return <SystemModeIcon />;
+    }
   };
 
   return (
@@ -34,8 +51,21 @@ const Navbar = ({ onShowAuth, isLoggedIn, onLogout, user }) => {
         <Link to="/contact" className="nav-link">Contact</Link>
       </div>
       
-      {/* Auth Buttons */}
+      {/* Theme Toggle and Auth Buttons */}
       <div className="nav-auth">
+        <IconButton 
+          onClick={toggleTheme}
+          sx={{ 
+            color: 'var(--text-primary)', 
+            mr: 1,
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.1)'
+            }
+          }}
+          title={`Current theme: ${themeMode}`}
+        >
+          {getThemeIcon()}
+        </IconButton>
         {!isLoggedIn ? (
           <div className="auth-buttons">
             <motion.button 

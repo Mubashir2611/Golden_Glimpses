@@ -35,4 +35,4 @@ ehthumbs.db
 *.njsproj
 *.sln
 *.sw?
-desktop.ini
+.desktop.ini/

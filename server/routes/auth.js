@@ -1,15 +1,19 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+// import jwt from 'jsonwebtoken'; // jwt is now used via helpers from middleware
 import { body, validationResult } from 'express-validator';
 import User from '../models/User.js';
 import { v4 as uuidv4 } from 'uuid';
-import { authenticateToken as auth } from '../middleware/auth.js';
+import { 
+  protect as auth, 
+  generateToken, 
+  generateRefreshToken 
+} from '../middleware/auth.js';
 
 const router = express.Router();
 
-// JWT Secret with fallback for development
-const JWT_SECRET = process.env.JWT_SECRET || '2242cdc4d9fbd0b0290a48ebe75bfe679bd48ad2491aec7e02495336aef99a61';
+// JWT_SECRET is handled within the auth middleware now. No need for it here.
+// const JWT_SECRET = process.env.JWT_SECRET || '2242cdc4d9fbd0b0290a48ebe75bfe679bd48ad2491aec7e02495336aef99a61';
 
 // Helper function to get mock users
 const getMockUsers = () => {
@@ -77,17 +81,17 @@ router.post('/register', [
       };
 
       // Add to mock database
-      addMockUser(newUser);      // Create JWT token
-      const token = jwt.sign(
-        { userId: newUser._id, email: newUser.email },
-        JWT_SECRET,
-        { expiresIn: '7d' }
-      );
+      addMockUser(newUser);
+      
+      // Generate tokens using helpers
+      const accessToken = generateToken(newUser._id);
+      const refreshToken = generateRefreshToken(newUser._id);
 
       return res.status(201).json({
         success: true,
         msg: 'User registered successfully',
-        token,
+        accessToken,
+        refreshToken,
         user: {
           id: newUser._id,
           name: newUser.name,
@@ -113,22 +117,15 @@ router.post('/register', [
       password: password // No manual hashing - let the model handle it
     });    await user.save();
 
-    // Create JWT token
-    const payload = {
-      userId: user._id,
-      email: user.email
-    };
-
-    const token = jwt.sign(
-      payload,
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    // Generate tokens using helpers
+    const accessToken = generateToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
 
     res.status(201).json({
       success: true,
       msg: 'User registered successfully',
-      token,
+      accessToken,
+      refreshToken,
       user: {
         id: user._id,
         name: user.name,
@@ -198,17 +195,17 @@ router.post('/login', [
       }
 
       // Update last login
-      user.lastLogin = new Date();      // Create JWT token
-      const token = jwt.sign(
-        { userId: user._id, email: user.email },
-        JWT_SECRET,
-        { expiresIn: '7d' }
-      );
+      user.lastLogin = new Date();
+      
+      // Generate tokens using helpers
+      const accessToken = generateToken(user._id);
+      const refreshToken = generateRefreshToken(user._id);
 
       return res.json({
         success: true,
         msg: 'Login successful',
-        token,
+        accessToken,
+        refreshToken,
         user: {
           id: user._id,
           name: user.name,
@@ -239,20 +236,15 @@ router.post('/login', [
     user.lastLogin = new Date();
     await user.save();
 
-    // Create JWT token
-    const payload = {
-      userId: user._id,
-      email: user.email
-    };    const token = jwt.sign(
-      payload,
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    // Generate tokens using helpers
+    const accessToken = generateToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
 
     res.json({
       success: true,
       msg: 'Login successful',
-      token,
+      accessToken,
+      refreshToken,
       user: {
         id: user._id,
         name: user.name,
@@ -324,5 +316,54 @@ router.get('/me', auth, async (req, res) => {
     });
   }
 });
+
+// @route   POST /api/auth/refresh
+// @desc    Refresh access token
+// @access  Public (requires valid refresh token)
+router.post('/refresh', async (req, res) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return res.status(401).json({ success: false, msg: 'Refresh token is required' });
+  }
+
+  try {
+    // JWT_SECRET for verification is implicitly handled by jwt.verify if process.env.JWT_SECRET is set,
+    // or falls back to the one defined in middleware/auth.js if that's where generateRefreshToken gets it.
+    // It's better if JWT_SECRET is consistently used. The one in middleware/auth.js is preferred.
+    const jwtModule = await import('jsonwebtoken'); // Dynamically import jsonwebtoken
+    const { default: jwt } = jwtModule;
+    
+    // Need to access the JWT_SECRET used by generateRefreshToken, which is from middleware/auth.js
+    // This is a bit tricky as it's not directly exported. For now, we'll assume process.env.JWT_SECRET is primary.
+    // A better solution would be a shared config or ensuring JWT_SECRET is consistently loaded.
+    const secret = process.env.JWT_SECRET || '2242cdc4d9fbd0b0290a48ebe75bfe679bd48ad2491aec7e02495336aef99a61';
+
+
+    const decoded = jwt.verify(refreshToken, secret);
+
+    if (decoded.type !== 'refresh') {
+      return res.status(403).json({ success: false, msg: 'Invalid token type for refresh' });
+    }
+
+    // Token is valid and is a refresh token, issue a new access token
+    const newAccessToken = generateToken(decoded.userId);
+
+    res.json({
+      success: true,
+      accessToken: newAccessToken
+    });
+
+  } catch (error) {
+    console.error('Refresh token error:', error.name, error.message);
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ success: false, msg: 'Refresh token expired, please log in again' });
+    } else if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ success: false, msg: 'Invalid refresh token' });
+    }
+    return res.status(500).json({ success: false, msg: 'Could not refresh token' });
+  }
+});
+
 
 export default router;

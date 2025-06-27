@@ -329,7 +329,7 @@ const CapsuleCreationModal = ({ open, onClose, onSuccess }) => {
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <ScheduleIcon sx={{ mr: 1, color: 'primary.main' }} />
                     <Typography variant="body2" sx={{ color: 'white' }}>
-                      Unlocks: {format(new Date(capsuleData.unlockDate), 'MMMM dd, yyyy')}
+                      Unlocks: {format(new Date(capsuleData.unlockDate), 'MMMM dd, yyyy \'at\' h:mm a')}
                     </Typography>
                   </Box>
                   

@@ -1,164 +1,34 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
-// JWT Secret with fallback for development
-const JWT_SECRET = process.env.JWT_SECRET || '2242cdc4d9fbd0b0290a48ebe75bfe679bd48ad2491aec7e02495336aef99a61';
+export const protect = async (req, res, next) => {
+  let token;
 
-const getMockUsers = () => {
-  try {
-    return global.mockUsers || [];
-  } catch (e) {
-    return [];
-  }
-};
-
-// Main authentication middleware
-const authenticateToken = async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(' ')[1]; 
-
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Access token required'
-      });
-    }    let decoded;
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     try {
-      decoded = jwt.verify(token, JWT_SECRET);
-    } catch (tokenError) {
-      if (tokenError.name === 'JsonWebTokenError') {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid token'
-        });
-      } else if (tokenError.name === 'TokenExpiredError') {
-        return res.status(401).json({
-          success: false,
-          message: 'Token has expired, please log in again'
-        });
-      } else {
-        throw tokenError;
-      }
-    }
-    
-    if (global.mockDB) {
-      const mockUsers = getMockUsers();
-      const mockUser = mockUsers.find(u => u._id === decoded.userId);
+      token = req.headers.authorization.split(' ')[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.userId = decoded.id;
+      req.user = await User.findById(decoded.id).select('-password');
       
-      if (!mockUser) {
-        return res.status(401).json({
-          success: false,
-          message: 'User not found'
-        });
+      if (!req.user) {
+        return res.status(401).json({ message: 'User not found' });
       }
       
-      if (!mockUser.isActive) {
-        return res.status(401).json({
-          success: false,
-          message: 'Account has been deactivated'
-        });
-      }
-      
-      req.user = mockUser;
-      req.userId = mockUser._id;
-      return next();    }
-    
-    // MongoDB flow
-    const user = await User.findById(decoded.userId).select('-password');
-    
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not found'
-      });
+      next();
+    } catch (error) {
+      console.error('Auth error:', error.message);
+      res.status(401).json({ message: 'Not authorized, token failed' });
     }
-
-    if (!user.isActive) {
-      return res.status(401).json({
-        success: false,
-        message: 'Account has been deactivated'
-      });
-    }
-
-    req.user = user;
-    req.userId = user._id; 
-    next();
-  } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid token'
-      });
-    }
-    
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Token has expired'
-      });
-    }
-
-    console.error('Auth middleware error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Authentication failed'
-    });
+  } else {
+    res.status(401).json({ message: 'Not authorized, no token' });
   }
 };
 
-
-const optionalAuth = async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-      req.user = null;
-      return next();
-    }    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    if (global.mockDB) {
-      // Mock database flow
-      const mockUsers = global.mockUsers || [];
-      const mockUser = mockUsers.find(u => u._id === decoded.userId);
-      req.user = mockUser && mockUser.isActive !== false ? mockUser : null;
-      return next();
-    }
-    
-    // MongoDB flow
-    const user = await User.findById(decoded.userId).select('-password');
-    
-    req.user = user && user.isActive ? user : null;
-    next();
-  } catch (error) {
-    req.user = null;
-    next();
-  }
+export const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
 
-const generateToken = (userId) => {
-  return jwt.sign(
-    { userId },
-    process.env.JWT_SECRET,
-    { 
-      expiresIn: '30d',
-      issuer: 'time-capsule-app'
-    }
-  );
+export const generateRefreshToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
-
-
-const generateRefreshToken = (userId) => {
-  return jwt.sign(
-    { userId, type: 'refresh' },
-    process.env.JWT_SECRET,
-    { 
-      expiresIn: '90d',
-      issuer: 'time-capsule-app'
-    }
-  );
-};
-
-export default authenticateToken;
-export { authenticateToken, optionalAuth, generateToken, generateRefreshToken };

@@ -1,10 +1,18 @@
 import express from 'express';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
-import { authenticateToken as auth } from '../middleware/auth.js';
+import { protect as auth } from '../middleware/auth.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+const cloudinaryStorage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'uploads',
+    allowed_formats: ['jpg', 'jpeg', 'png'],
+  },
+});
 
 const router = express.Router();
 
@@ -12,11 +20,17 @@ const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Log environment variables for Cloudinary before configuration
+console.log('[media.js] CLOUDINARY_CLOUD_NAME:', process.env.CLOUDINARY_CLOUD_NAME ? 'Loaded' : 'MISSING/EMPTY');
+console.log('[media.js] CLOUDINARY_API_KEY:', process.env.CLOUDINARY_API_KEY ? 'Loaded' : 'MISSING/EMPTY');
+console.log('[media.js] CLOUDINARY_API_SECRET:', process.env.CLOUDINARY_API_SECRET ? 'Loaded' : 'MISSING/EMPTY');
+
 // Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true, // Explicitly set secure
 });
 
 // Configure multer for memory storage
@@ -42,7 +56,7 @@ const upload = multer({
 router.post('/upload', auth, upload.single('file'), async (req, res) => {
   try {
     console.log('Media upload request received');
-    console.log('User ID:', req.userId);
+    console.log('User ID:', req.user?.id);
     console.log('File:', req.file ? req.file.originalname : 'No file');
     
     if (!req.file) {
@@ -61,7 +75,10 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
       
       // Create uploads directory if it doesn't exist
       const uploadsDir = path.join(__dirname, '..', 'uploads');
+      console.log('Uploads directory path:', uploadsDir);
+      
       if (!fs.existsSync(uploadsDir)) {
+        console.log('Creating uploads directory...');
         fs.mkdirSync(uploadsDir, { recursive: true });
       }
       
@@ -72,6 +89,7 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
       const filePath = path.join(uploadsDir, fileName);
       
       // Save file to local uploads directory
+      console.log('Saving file to:', filePath);
       fs.writeFileSync(filePath, req.file.buffer);
       
       // Create URL that points to our local static file server
@@ -80,6 +98,7 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
       
       console.log('File saved locally:', filePath);
       console.log('Mock URL:', mockUrl);
+      console.log('File exists after save:', fs.existsSync(filePath));
       
       return res.json({
         success: true,

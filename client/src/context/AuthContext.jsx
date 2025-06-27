@@ -1,22 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
-
-// Create axios instance with base URL and default headers
-const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
-});
-
-// Add token to requests if available
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+// import axios from 'axios'; // Remove local axios
+import api, { authAPI } from '../utils/api'; // Import shared api instance and specific API calls
 
 const AuthContext = createContext();
 
@@ -71,11 +55,12 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       setError(null);
-      // Use the imported API module
-      const response = await api.post('/auth/login', { email, password });
-      const { token, user } = response.data;
+      // Use the authAPI from utils/api.js
+      const response = await authAPI.login(email, password); // Assuming authAPI is set up
+      const { accessToken, refreshToken, user } = response.data;
       
-      localStorage.setItem('token', token);
+      localStorage.setItem('token', accessToken);
+      localStorage.setItem('refreshToken', refreshToken); // Store refresh token
       setCurrentUser(user);
       setIsAuthenticated(true);
       return { success: true };
@@ -91,11 +76,12 @@ export const AuthProvider = ({ children }) => {
   const register = async (name, email, password) => {
     try {
       setError(null);
-      // Use the imported API module
-      const response = await api.post('/auth/register', { name, email, password });
-      const { token, user } = response.data;
+      // Use the authAPI from utils/api.js
+      const response = await authAPI.register(name, email, password); // Assuming authAPI is set up
+      const { accessToken, refreshToken, user } = response.data;
       
-      localStorage.setItem('token', token);
+      localStorage.setItem('token', accessToken);
+      localStorage.setItem('refreshToken', refreshToken); // Store refresh token
       setCurrentUser(user);
       setIsAuthenticated(true);
       return { success: true };
@@ -110,8 +96,11 @@ export const AuthProvider = ({ children }) => {
   };
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken'); // Remove refresh token on logout
     setCurrentUser(null);
     setIsAuthenticated(false);
+    // Optionally, notify other tabs/windows or redirect
+    // window.location.href = '/'; // Or use useNavigate if in a component context
   };  const demoLogin = async () => {
     try {
       setError(null);
