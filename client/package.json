@@ -21,6 +21,7 @@
     "fabric": "^6.7.0",
     "framer-motion": "^12.12.2",
     "html2canvas": "^1.4.1",
+    "lucide-react": "^0.525.0",
     "package_name": "^1.0.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

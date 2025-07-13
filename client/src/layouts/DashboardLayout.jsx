@@ -19,15 +19,14 @@ import { styled } from '@mui/material/styles';
 import { 
   Menu as MenuIcon, 
   Dashboard as DashboardIcon,
-  AddCircleOutline as AddIcon,
-  Explore as ExploreIcon, 
+  AddCircleOutline as AddIcon, 
   Settings as SettingsIcon,
+  Memory as MemoryIcon,
   Logout as LogoutIcon,
-  AccountCircle as AccountIcon
+  AccountCircle as AccountIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-
 const drawerWidth = 240;
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
@@ -61,10 +60,11 @@ const DashboardLayout = ({ children }) => {
     setUserMenuAnchor(null);
   };
   
+  
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'Create New Capsule', icon: <AddIcon />, path: '/create-capsule' },
-    { text: 'Memories', icon: <ExploreIcon />, path: '/explore' },
+    // { text: 'Memories', icon: <MemoryIcon />, path: '/explore' },
     { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
   ];
   

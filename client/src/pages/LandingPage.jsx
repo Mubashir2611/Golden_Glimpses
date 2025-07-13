@@ -29,9 +29,9 @@ const LandingPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated, login, register, demoLogin, currentUser, logout } = useAuth();
   const backgroundImages = [
-    '/public/assests/images/slides.jpg',
-    '/public/assests/images/slides2.jpg',
-    '/public/assests/images/slides4.jpg',
+    'assets/images/slides.jpg',
+    'assets/images/New1.jpg',
+    'assets/images/slides4.jpg',
   ];
   
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -399,35 +399,6 @@ const LandingPage = () => {
                 >
                   {loading ? 'Please wait...' : (authMode === 'login' ? 'Sign In' : 'Create Account')}
                 </Button>
-                
-                {/* Demo Login Button */}
-                {authMode === 'login' && (
-                  <Button
-                    onClick={handleDemoLogin}
-                    fullWidth
-                    variant="outlined"
-                    disabled={loading}
-                    sx={{
-                      mt: 2,
-                      py: 1.5,
-                      fontSize: '0.9rem',
-                      fontWeight: 500,
-                      borderRadius: 2,
-                      borderColor: 'rgba(255, 255, 255, 0.3)',
-                      color: 'rgba(255, 255, 255, 0.8)',
-                      '&:hover': {
-                        borderColor: 'rgba(255, 255, 255, 0.5)',
-                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                      },
-                      '&:disabled': {
-                        borderColor: 'rgba(255, 255, 255, 0.1)',
-                        color: 'rgba(255, 255, 255, 0.3)',
-                      },
-                    }}
-                  >
-                    🚀 Try Demo (demo@example.com)
-                  </Button>
-                )}
               </Box>
             </form>
 

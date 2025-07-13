@@ -139,7 +139,8 @@ const LoginModal = ({ isOpen, onClose }) => {
               onChange={handleChange}
               required
             />
-          </div>            <button type="submit" className="submit-button" disabled={loading}>
+          </div>            
+          <button type="submit" className="submit-button" disabled={loading}>
             {loading ? (isRegister ? 'Creating Account...' : 'Signing In...') : (isRegister ? 'Sign Up' : 'Log In')}
           </button>
             <button 
