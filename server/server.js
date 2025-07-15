@@ -29,7 +29,10 @@ const corsOptions = {
   credentials: true,
 };
 app.use(cors(corsOptions));
-
+// Basic route to check server status
+app.get('/', (req, res) => {
+  res.send('API is running...');
+});
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
