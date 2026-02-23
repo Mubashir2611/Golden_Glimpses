@@ -1,4 +1,4 @@
-﻿# 🎉 MERN Time Capsule - Complete Application
+﻿# 🎉 Time Capsule Application
 
 A fully functional time capsule application with drag-and-drop media upload, built with the MERN stack.
 
@@ -129,3 +129,4 @@ npm run dev
 ---
 
 **The app is fully functional and ready to use! 🎉**
+
