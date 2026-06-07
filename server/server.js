@@ -25,7 +25,7 @@ const app = express();
 
 // CORS configuration
 const corsOptions = {
-  origin: ['https://golden-glimpse.vercel.app', 'http://localhost:5000'],
+  origin: ['https://golden-glimpse.vercel.app', 'http://localhost:5176'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
